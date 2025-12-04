@@ -5,7 +5,7 @@ import '../App.css';
 
 interface CollectionsManagerProps {
   articleId: string;
-  currentCollections?: Array<{ collection: Collection }>;
+  currentCollections?: Array<{ collection: Collection | { id: string; name: string } }>;
   onUpdate?: () => void;
 }
 
@@ -46,7 +46,11 @@ export default function CollectionsManager({ articleId, currentCollections = [],
   }
 
   async function handleToggleCollection(collectionId: string) {
-    const isAssigned = currentCollections.some(ac => ac.collection.id === collectionId);
+    const isAssigned = currentCollections.some(ac => {
+      const collection = ac.collection;
+      const id = 'id' in collection ? collection.id : (collection as Collection).id;
+      return id === collectionId;
+    });
     
     try {
       if (isAssigned) {

@@ -5,7 +5,7 @@ import '../App.css';
 
 interface TagsManagerProps {
   articleId: string;
-  currentTags?: Array<{ tag: Tag }>;
+  currentTags?: Array<{ tag: Tag | { id: string; name: string } }>;
   onUpdate?: () => void;
 }
 
