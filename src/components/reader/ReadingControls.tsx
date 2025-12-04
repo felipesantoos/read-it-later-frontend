@@ -30,20 +30,20 @@ export default function ReadingControls({
 }: ReadingControlsProps) {
   return (
     <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', flexWrap: 'wrap', width: '100%' }}>
-      <label style={{ fontSize: '0.75rem' }}>
-        A: 
+      <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+        <span style={{ minWidth: '60px' }}>Altura:</span>
         <input
           type="range"
           min="12"
           max="24"
           value={fontSize}
           onChange={(e) => onFontSizeChange(Number(e.target.value))}
-          style={{ marginLeft: '0.3rem', width: '70px' }}
+          style={{ width: '70px' }}
         />
-        {fontSize}px
+        <span style={{ minWidth: '35px' }}>{fontSize}px</span>
       </label>
-      <label style={{ fontSize: '0.75rem' }}>
-        L: 
+      <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+        <span style={{ minWidth: '60px' }}>Linha:</span>
         <input
           type="range"
           min="1.2"
@@ -51,9 +51,9 @@ export default function ReadingControls({
           step="0.1"
           value={lineHeight}
           onChange={(e) => onLineHeightChange(Number(e.target.value))}
-          style={{ marginLeft: '0.3rem', width: '70px' }}
+          style={{ width: '70px' }}
         />
-        {lineHeight.toFixed(1)}
+        <span style={{ minWidth: '35px' }}>{lineHeight.toFixed(1)}</span>
       </label>
       <StatusDropdown
         article={article}
