@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type MutableRefObject } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { articlesApi, type Article } from '../api/articles';
 import { highlightsApi, type Highlight } from '../api/highlights';
@@ -21,7 +21,7 @@ export default function ReaderWidget() {
   const [fontSize, setFontSize] = useState(16);
   const [lineHeight, setLineHeight] = useState(1.6);
   const [theme, setTheme] = useState<'light' | 'dark' | 'sepia'>('light');
-  const contentRef = useRef<HTMLDivElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null) as MutableRefObject<HTMLDivElement | null>;
   const [selectedText, setSelectedText] = useState<string>('');
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -194,6 +194,30 @@ export default function ReaderWidget() {
     }
   }
 
+  async function handleResetProgress() {
+    if (!article) return;
+    try {
+      const response = await articlesApi.updateReadingProgress(article.id, 0);
+      updateArticleState(response.data);
+      
+      // Also reset currentPage if totalPages is set
+      if (article.totalPages) {
+        await articlesApi.update(article.id, { currentPage: 0 });
+        updateArticleState({ currentPage: 0 });
+      }
+      
+      // Scroll to top
+      if (contentRef.current) {
+        contentRef.current.scrollTop = 0;
+      }
+      
+      setMessage({ text: 'Progresso resetado!', type: 'success' });
+    } catch (error) {
+      console.error('Error resetting progress:', error);
+      setMessage({ text: 'Erro ao resetar progresso', type: 'error' });
+    }
+  }
+
   const currentTheme = themeStyles[theme];
 
   if (loading) {
@@ -255,6 +279,8 @@ export default function ReaderWidget() {
           readingProgress={article.readingProgress}
           onPageChange={handlePageChange}
           onPagesUpdate={handlePagesUpdate}
+          onResetProgress={handleResetProgress}
+          onTagsUpdate={updateArticleTagsAndCollections}
         />
       </div>
 
@@ -273,7 +299,7 @@ export default function ReaderWidget() {
         boxSizing: 'border-box',
         overflow: 'hidden'
       }} className="reader-actions-grid">
-        {/* Column 1: Tags and Collections */}
+        {/* Column 1: Collections */}
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ flex: 1, height: '100%', minWidth: 0 }}>
             <ArticleTagsAndCollections

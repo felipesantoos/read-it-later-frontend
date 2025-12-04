@@ -1,4 +1,3 @@
-import TagsManager from '../TagsManager';
 import CollectionsManager from '../CollectionsManager';
 import type { Article } from '../../api/articles';
 import type { Highlight } from '../../api/highlights';
@@ -21,14 +20,6 @@ export function ArticleTagsAndCollections({ article, onTagsUpdate, onCollections
   const currentTheme = themeStyles[theme];
   return (
     <div style={{ display: 'flex', gap: '0.5rem', height: '100%', alignItems: 'stretch' }}>
-      <div style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <TagsManager
-          articleId={article.id}
-          currentTags={article.articleTags}
-          onUpdate={onTagsUpdate}
-          theme={theme}
-        />
-      </div>
       <div style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
         <CollectionsManager
           articleId={article.id}

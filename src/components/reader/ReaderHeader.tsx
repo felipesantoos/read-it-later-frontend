@@ -5,6 +5,7 @@ import type { Theme } from '../../utils/themeStyles';
 import { themeStyles } from '../../utils/themeStyles';
 import { validatePages } from '../../utils/validation';
 import StatusDropdown from './StatusDropdown';
+import TagsManager from '../TagsManager';
 
 interface ReaderHeaderProps {
   article: Article;
@@ -25,6 +26,8 @@ interface ReaderHeaderProps {
   readingProgress: number;
   onPageChange: (newPage: number) => Promise<void>;
   onPagesUpdate: (totalPages: number | null, currentPage: number | null) => Promise<void>;
+  onResetProgress: () => Promise<void>;
+  onTagsUpdate?: () => void;
 }
 
 export default function ReaderHeader({ 
@@ -45,7 +48,9 @@ export default function ReaderHeader({
   onCreateHighlight,
   readingProgress,
   onPageChange,
-  onPagesUpdate
+  onPagesUpdate,
+  onResetProgress,
+  onTagsUpdate
 }: ReaderHeaderProps) {
   const navigate = useNavigate();
   const currentTheme = themeStyles[theme];
@@ -311,6 +316,21 @@ export default function ReaderHeader({
             <span style={{ fontSize: '0.7rem', color: currentTheme.secondaryText, minWidth: '35px' }}>
               {Math.round(readingProgress * 100)}%
             </span>
+            <button
+              onClick={onResetProgress}
+              style={{
+                padding: '0.15rem 0.3rem',
+                fontSize: '0.7rem',
+                backgroundColor: currentTheme.buttonBg,
+                color: currentTheme.text,
+                border: 'none',
+                borderRadius: '3px',
+                cursor: 'pointer'
+              }}
+              title="Resetar progresso"
+            >
+              🔄
+            </button>
           </div>
         )}
 
@@ -385,6 +405,15 @@ export default function ReaderHeader({
           onChange={onStatusChange}
           isUpdating={isUpdatingStatus}
           theme={theme}
+        />
+
+        {/* Tags Button */}
+        <TagsManager
+          articleId={article.id}
+          currentTags={article.articleTags}
+          onUpdate={onTagsUpdate}
+          theme={theme}
+          compact={true}
         />
 
         {/* Highlight Button */}

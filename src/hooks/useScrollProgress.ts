@@ -26,6 +26,12 @@ export function useScrollProgress({ contentRef, article, onArticleUpdate }: UseS
       const currentArticle = articleRef.current;
       if (!element || !currentArticle) return;
 
+      // Disable scroll-based progress update if totalPages is set (>= 1)
+      // Progress should only be updated by page changes in this case
+      if (currentArticle.totalPages !== null && currentArticle.totalPages >= 1) {
+        return;
+      }
+
       const scrollTop = element.scrollTop;
       const scrollHeight = element.scrollHeight - element.clientHeight;
       const progress = scrollHeight > 0 ? scrollTop / scrollHeight : 0;
@@ -42,17 +48,23 @@ export function useScrollProgress({ contentRef, article, onArticleUpdate }: UseS
           const currentArticle = articleRef.current;
           if (!currentArticle) return;
 
-          // If article has totalPages, update by page instead
-          if (currentArticle.totalPages && currentArticle.totalPages > 0) {
-            const newCurrentPage = Math.round(progress * currentArticle.totalPages);
-            if (newCurrentPage !== currentArticle.currentPage) {
-              const response = await articlesApi.updateReadingProgressByPage(currentArticle.id, newCurrentPage);
-              updatedArticle = response.data;
-            }
-          } else {
-            const response = await articlesApi.updateReadingProgress(currentArticle.id, progress);
-            updatedArticle = response.data;
+          // Only update if progress increased (never decrease progress based on scroll)
+          const currentProgress = currentArticle.readingProgress || 0;
+          
+          // Never decrease progress - only update if new progress is greater
+          if (progress <= currentProgress) {
+            return;
           }
+          
+          // Only update if progress increased significantly (more than 0.5% difference)
+          const progressDiff = progress - currentProgress;
+          if (progressDiff < 0.005) {
+            return;
+          }
+
+          // Update by progress percentage - backend will sync currentPage if totalPages is set
+          const response = await articlesApi.updateReadingProgress(currentArticle.id, progress);
+          updatedArticle = response.data;
 
           // Update status to READING when article is started (but not auto-update to FINISHED)
           let newStatus: Article['status'] | undefined;

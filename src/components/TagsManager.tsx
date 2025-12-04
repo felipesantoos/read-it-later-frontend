@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { tagsApi, type Tag } from '../api/tags';
 import Toast from './Toast';
 import type { Theme } from '../utils/themeStyles';
+import { themeStyles } from '../utils/themeStyles';
 import '../App.css';
 
 interface TagsManagerProps {
@@ -9,9 +10,10 @@ interface TagsManagerProps {
   currentTags?: Array<{ tag: Tag | { id: string; name: string } }>;
   onUpdate?: () => void;
   theme?: Theme;
+  compact?: boolean;
 }
 
-export default function TagsManager({ articleId, currentTags = [], onUpdate, theme = 'light' }: TagsManagerProps) {
+export default function TagsManager({ articleId, currentTags = [], onUpdate, theme = 'light', compact = false }: TagsManagerProps) {
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [newTagName, setNewTagName] = useState('');
   const [loading, setLoading] = useState(true);
@@ -152,6 +154,269 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
     tag.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const currentTheme = themeStyles[theme];
+
+  // Compact mode: just show button with badge and popover
+  if (compact) {
+    return (
+      <div style={{ position: 'relative', display: 'inline-block' }}>
+        {message && (
+          <Toast
+            message={message.text}
+            type={message.type}
+            onClose={() => setMessage(null)}
+            duration={3000}
+          />
+        )}
+        <div style={{ position: 'relative' }} data-popover-container>
+          <button
+            ref={buttonRef}
+            onClick={() => setShowPopover(!showPopover)}
+            style={{
+              padding: '0.25rem 0.5rem',
+              fontSize: '0.75rem',
+              backgroundColor: currentTheme.buttonBg,
+              border: `1px solid ${currentTheme.cardBorder}`,
+              borderRadius: '4px',
+              cursor: 'pointer',
+              color: currentTheme.text,
+              position: 'relative',
+            }}
+            title="Gerenciar tags"
+          >
+            Tags
+            {currentTags.length > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '-8px',
+                  right: '-8px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  borderRadius: '12px',
+                  padding: '0.15rem 0.5rem',
+                  fontSize: '0.7rem',
+                  fontWeight: 600,
+                  minWidth: '18px',
+                  textAlign: 'center',
+                  lineHeight: '1.2',
+                }}
+              >
+                {currentTags.length}
+              </span>
+            )}
+          </button>
+          {showPopover && popoverPosition && (
+            <>
+              <div
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 9999,
+                }}
+                onClick={() => {
+                  setShowPopover(false);
+                  setSearchQuery('');
+                  const assignedIds = new Set(currentTags.map(at => at.tag.id));
+                  setSelectedTagIds(assignedIds);
+                }}
+              />
+              <div
+                style={{
+                  position: 'fixed',
+                  top: `${popoverPosition.top}px`,
+                  left: `${popoverPosition.left}px`,
+                  backgroundColor: currentTheme.cardBg,
+                  border: `1px solid ${currentTheme.cardBorder}`,
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                  zIndex: 10000,
+                  minWidth: '250px',
+                  maxWidth: '400px',
+                  maxHeight: '400px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Search input */}
+                <div style={{ padding: '0.5rem', borderBottom: `1px solid ${currentTheme.cardBorder}` }}>
+                  <input
+                    type="text"
+                    placeholder="Buscar tags..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.25rem 0.5rem',
+                      fontSize: '0.75rem',
+                      border: `1px solid ${currentTheme.cardBorder}`,
+                      borderRadius: '4px',
+                      backgroundColor: currentTheme.inputBg,
+                      color: currentTheme.text,
+                    }}
+                    autoFocus
+                  />
+                </div>
+
+                {/* Create new tag */}
+                <div style={{ padding: '0.5rem', borderBottom: `1px solid ${currentTheme.cardBorder}`, display: 'flex', gap: '0.25rem' }}>
+                  <input
+                    type="text"
+                    placeholder="Nova tag..."
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleCreateTag();
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '0.25rem 0.5rem',
+                      fontSize: '0.75rem',
+                      border: `1px solid ${currentTheme.cardBorder}`,
+                      borderRadius: '4px',
+                      backgroundColor: currentTheme.inputBg,
+                      color: currentTheme.text,
+                    }}
+                  />
+                  <button
+                    onClick={handleCreateTag}
+                    disabled={!newTagName.trim()}
+                    style={{
+                      padding: '0.25rem 0.5rem',
+                      fontSize: '0.75rem',
+                      whiteSpace: 'nowrap',
+                      backgroundColor: currentTheme.buttonBg,
+                      color: currentTheme.text,
+                      border: `1px solid ${currentTheme.cardBorder}`,
+                      borderRadius: '4px',
+                      cursor: newTagName.trim() ? 'pointer' : 'not-allowed',
+                      opacity: newTagName.trim() ? 1 : 0.5,
+                    }}
+                  >
+                    Criar
+                  </button>
+                </div>
+
+                {/* Tags list */}
+                <div style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  padding: '0.5rem',
+                  maxHeight: '250px',
+                }}>
+                  {loading ? (
+                    <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, textAlign: 'center' }}>Carregando...</p>
+                  ) : filteredTags.length === 0 ? (
+                    <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, textAlign: 'center' }}>
+                      {searchQuery ? 'Nenhuma tag encontrada' : 'Nenhuma tag ainda'}
+                    </p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      {filteredTags.map((tag) => {
+                        const isSelected = selectedTagIds.has(tag.id);
+                        return (
+                          <div
+                            key={tag.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              padding: '0.25rem',
+                              cursor: 'pointer',
+                              borderRadius: '4px',
+                              backgroundColor: isSelected ? (theme === 'dark' ? '#1e3a5f' : '#e7f3ff') : 'transparent',
+                            }}
+                            onClick={() => handleToggleSelection(tag.id)}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleSelection(tag.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              style={{ cursor: 'pointer', width: '16px', height: '16px', flexShrink: 0 }}
+                            />
+                            <span style={{ fontSize: '0.75rem', flex: 1, color: currentTheme.text }}>{tag.name}</span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteTag(tag.id);
+                              }}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#dc3545',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem',
+                                padding: '0 0.25rem',
+                              }}
+                              title="Deletar tag"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div style={{
+                  padding: '0.5rem',
+                  borderTop: `1px solid ${currentTheme.cardBorder}`,
+                  display: 'flex',
+                  gap: '0.5rem',
+                  justifyContent: 'flex-end',
+                }}>
+                  <button
+                    onClick={() => {
+                      setShowPopover(false);
+                      setSearchQuery('');
+                      const assignedIds = new Set(currentTags.map(at => at.tag.id));
+                      setSelectedTagIds(assignedIds);
+                    }}
+                    style={{
+                      padding: '0.25rem 0.75rem',
+                      fontSize: '0.75rem',
+                      backgroundColor: currentTheme.buttonBg,
+                      color: currentTheme.text,
+                      border: `1px solid ${currentTheme.cardBorder}`,
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleApplyTags}
+                    style={{
+                      padding: '0.25rem 0.75rem',
+                      fontSize: '0.75rem',
+                      backgroundColor: '#007bff',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Aplicar
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Full mode: original implementation
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
       {message && (
@@ -237,8 +502,8 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                     position: 'fixed',
                     top: `${popoverPosition.top}px`,
                     left: `${popoverPosition.left}px`,
-                    backgroundColor: 'white',
-                    border: '1px solid #dee2e6',
+                    backgroundColor: currentTheme.cardBg,
+                    border: `1px solid ${currentTheme.cardBorder}`,
                     borderRadius: '8px',
                     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
                     zIndex: 10000,
@@ -251,7 +516,7 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                   onClick={(e) => e.stopPropagation()}
                 >
                 {/* Search input */}
-                <div style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
+                <div style={{ padding: '0.5rem', borderBottom: `1px solid ${currentTheme.cardBorder}` }}>
                   <input
                     type="text"
                     placeholder="Buscar tags..."
@@ -261,15 +526,17 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                       width: '100%',
                       padding: '0.25rem 0.5rem',
                       fontSize: '0.75rem',
-                      border: '1px solid #dee2e6',
+                      border: `1px solid ${currentTheme.cardBorder}`,
                       borderRadius: '4px',
+                      backgroundColor: currentTheme.inputBg,
+                      color: currentTheme.text,
                     }}
                     autoFocus
                   />
                 </div>
 
                 {/* Create new tag */}
-                <div style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6', display: 'flex', gap: '0.25rem' }}>
+                <div style={{ padding: '0.5rem', borderBottom: `1px solid ${currentTheme.cardBorder}`, display: 'flex', gap: '0.25rem' }}>
                   <input
                     type="text"
                     placeholder="Nova tag..."
@@ -284,8 +551,10 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                       flex: 1,
                       padding: '0.25rem 0.5rem',
                       fontSize: '0.75rem',
-                      border: '1px solid #dee2e6',
+                      border: `1px solid ${currentTheme.cardBorder}`,
                       borderRadius: '4px',
+                      backgroundColor: currentTheme.inputBg,
+                      color: currentTheme.text,
                     }}
                   />
                   <button
@@ -295,6 +564,12 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                       padding: '0.25rem 0.5rem',
                       fontSize: '0.75rem',
                       whiteSpace: 'nowrap',
+                      backgroundColor: currentTheme.buttonBg,
+                      color: currentTheme.text,
+                      border: `1px solid ${currentTheme.cardBorder}`,
+                      borderRadius: '4px',
+                      cursor: newTagName.trim() ? 'pointer' : 'not-allowed',
+                      opacity: newTagName.trim() ? 1 : 0.5,
                     }}
                   >
                     Criar
@@ -309,9 +584,9 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                   maxHeight: '250px',
                 }}>
                   {loading ? (
-                    <p style={{ fontSize: '0.75rem', color: '#666', textAlign: 'center' }}>Carregando...</p>
+                    <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, textAlign: 'center' }}>Carregando...</p>
                   ) : filteredTags.length === 0 ? (
-                    <p style={{ fontSize: '0.75rem', color: '#666', textAlign: 'center' }}>
+                    <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, textAlign: 'center' }}>
                       {searchQuery ? 'Nenhuma tag encontrada' : 'Nenhuma tag ainda'}
                     </p>
                   ) : (
@@ -328,7 +603,7 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                               padding: '0.25rem',
                               cursor: 'pointer',
                               borderRadius: '4px',
-                              backgroundColor: isSelected ? '#e7f3ff' : 'transparent',
+                              backgroundColor: isSelected ? (theme === 'dark' ? '#1e3a5f' : '#e7f3ff') : 'transparent',
                             }}
                             onClick={() => handleToggleSelection(tag.id)}
                           >
@@ -339,7 +614,7 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                               onClick={(e) => e.stopPropagation()}
                               style={{ cursor: 'pointer', width: '16px', height: '16px', flexShrink: 0 }}
                             />
-                            <span style={{ fontSize: '0.75rem', flex: 1 }}>{tag.name}</span>
+                            <span style={{ fontSize: '0.75rem', flex: 1, color: currentTheme.text }}>{tag.name}</span>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -367,7 +642,7 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                 {/* Actions */}
                 <div style={{
                   padding: '0.5rem',
-                  borderTop: '1px solid #dee2e6',
+                  borderTop: `1px solid ${currentTheme.cardBorder}`,
                   display: 'flex',
                   gap: '0.5rem',
                   justifyContent: 'flex-end',
@@ -382,6 +657,11 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                     style={{
                       padding: '0.25rem 0.75rem',
                       fontSize: '0.75rem',
+                      backgroundColor: currentTheme.buttonBg,
+                      color: currentTheme.text,
+                      border: `1px solid ${currentTheme.cardBorder}`,
+                      borderRadius: '4px',
+                      cursor: 'pointer',
                     }}
                   >
                     Cancelar
