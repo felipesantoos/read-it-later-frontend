@@ -25,8 +25,20 @@ export default function PageTracker({ article, onPageChange, onPagesUpdate, onEr
   }, [article.totalPages, article.currentPage]);
 
   const handleSavePages = async () => {
-    const totalPages = editingTotalPages ? parseInt(editingTotalPages) : null;
-    const currentPage = editingCurrentPage ? parseInt(editingCurrentPage) : null;
+    const totalPagesValue = editingTotalPages.trim();
+    const currentPageValue = editingCurrentPage.trim();
+    
+    let totalPages: number | null = null;
+    if (totalPagesValue) {
+      const parsed = parseInt(totalPagesValue, 10);
+      totalPages = isNaN(parsed) ? null : parsed;
+    }
+    
+    let currentPage: number | null = null;
+    if (currentPageValue) {
+      const parsed = parseInt(currentPageValue, 10);
+      currentPage = isNaN(parsed) ? null : parsed;
+    }
 
     const validation = validatePages(totalPages, currentPage);
     if (!validation.isValid) {
@@ -54,7 +66,6 @@ export default function PageTracker({ article, onPageChange, onPagesUpdate, onEr
         Total:
         <input
           type="number"
-          min="1"
           value={editingTotalPages}
           onChange={(e) => setEditingTotalPages(e.target.value)}
           placeholder="300"
