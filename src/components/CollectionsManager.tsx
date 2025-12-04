@@ -1,15 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { collectionsApi, type Collection } from '../api/collections';
 import Toast from './Toast';
+import type { Theme } from '../utils/themeStyles';
 import '../App.css';
 
 interface CollectionsManagerProps {
   articleId: string;
   currentCollections?: Array<{ collection: Collection | { id: string; name: string } }>;
   onUpdate?: () => void;
+  theme?: Theme;
 }
 
-export default function CollectionsManager({ articleId, currentCollections = [], onUpdate }: CollectionsManagerProps) {
+export default function CollectionsManager({ articleId, currentCollections = [], onUpdate, theme = 'light' }: CollectionsManagerProps) {
   const [allCollections, setAllCollections] = useState<Collection[]>([]);
   const [newCollectionName, setNewCollectionName] = useState('');
   const [loading, setLoading] = useState(true);
@@ -33,9 +35,18 @@ export default function CollectionsManager({ articleId, currentCollections = [],
       // Calculate popover position (fixed is relative to viewport)
       if (buttonRef.current) {
         const rect = buttonRef.current.getBoundingClientRect();
+        const popoverWidth = 300; // Approximate width
+        const viewportWidth = window.innerWidth;
+        let left = rect.left;
+        
+        // Adjust if popover would overflow on the right
+        if (left + popoverWidth > viewportWidth) {
+          left = Math.max(8, viewportWidth - popoverWidth - 8);
+        }
+        
         setPopoverPosition({
           top: rect.bottom + 4,
-          left: rect.left,
+          left: left,
         });
       }
     } else {

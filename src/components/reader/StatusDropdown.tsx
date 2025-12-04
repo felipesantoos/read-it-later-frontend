@@ -1,6 +1,8 @@
 import { useRef, useEffect, useState } from 'react';
 import type { Article } from '../../api/articles';
 import { statusColors, statusLabels, allStatuses } from '../../constants/articleStatus';
+import type { Theme } from '../../utils/themeStyles';
+import { themeStyles } from '../../utils/themeStyles';
 
 interface StatusDropdownProps {
   article: Article;
@@ -8,12 +10,14 @@ interface StatusDropdownProps {
   onToggle: () => void;
   onChange: (newStatus: Article['status']) => void;
   isUpdating?: boolean;
+  theme?: Theme;
 }
 
-export default function StatusDropdown({ article, isOpen, onToggle, onChange, isUpdating = false }: StatusDropdownProps) {
+export default function StatusDropdown({ article, isOpen, onToggle, onChange, isUpdating = false, theme = 'light' }: StatusDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLSpanElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+  const currentTheme = themeStyles[theme];
 
   // Calculate dropdown position when opened
   useEffect(() => {
@@ -74,8 +78,8 @@ export default function StatusDropdown({ article, isOpen, onToggle, onChange, is
               position: 'fixed',
               top: `${dropdownPosition.top}px`,
               left: `${dropdownPosition.left}px`,
-              backgroundColor: 'white',
-              border: '1px solid #ddd',
+              backgroundColor: currentTheme.cardBg,
+              border: `1px solid ${currentTheme.cardBorder}`,
               borderRadius: '4px',
               boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
               zIndex: 10000,
@@ -92,18 +96,18 @@ export default function StatusDropdown({ article, isOpen, onToggle, onChange, is
                 padding: '0.5rem 0.75rem',
                 fontSize: '0.75rem',
                 cursor: isUpdating ? 'wait' : 'pointer',
-                backgroundColor: status === article.status ? '#f0f0f0' : 'white',
-                color: status === article.status ? statusColors[status] : '#333',
+                backgroundColor: status === article.status ? currentTheme.buttonBg : currentTheme.cardBg,
+                color: status === article.status ? statusColors[status] : currentTheme.text,
                 transition: 'background-color 0.15s',
               }}
               onMouseEnter={(e) => {
                 if (status !== article.status && !isUpdating) {
-                  (e.currentTarget as HTMLElement).style.backgroundColor = '#f8f9fa';
+                  (e.currentTarget as HTMLElement).style.backgroundColor = currentTheme.buttonBg;
                 }
               }}
               onMouseLeave={(e) => {
                 if (status !== article.status) {
-                  (e.currentTarget as HTMLElement).style.backgroundColor = 'white';
+                  (e.currentTarget as HTMLElement).style.backgroundColor = currentTheme.cardBg;
                 }
               }}
             >

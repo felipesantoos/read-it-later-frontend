@@ -10,6 +10,7 @@ import ArticleContent from '../components/reader/ArticleContent';
 import { ArticleTagsAndCollections, ArticleHighlights } from '../components/reader/ArticleMetadata';
 import { useScrollProgress } from '../hooks/useScrollProgress';
 import { validatePageChange } from '../utils/validation';
+import { themeStyles } from '../utils/themeStyles';
 import '../App.css';
 
 export default function ReaderWidget() {
@@ -26,6 +27,7 @@ export default function ReaderWidget() {
   const [selectedText, setSelectedText] = useState<string>('');
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isTopBarVisible, setIsTopBarVisible] = useState(true);
 
   useEffect(() => {
     if (id) {
@@ -194,9 +196,11 @@ export default function ReaderWidget() {
     }
   }
 
+  const currentTheme = themeStyles[theme];
+
   if (loading) {
     return (
-      <div className="widget-container">
+      <div className="widget-container" style={{ backgroundColor: currentTheme.bg, color: currentTheme.text }}>
         <p>Carregando...</p>
       </div>
     );
@@ -204,7 +208,7 @@ export default function ReaderWidget() {
 
   if (!article) {
     return (
-      <div className="widget-container">
+      <div className="widget-container" style={{ backgroundColor: currentTheme.bg, color: currentTheme.text }}>
         <p>Artigo não encontrado</p>
         <button onClick={() => navigate('/inbox')}>Voltar</button>
       </div>
@@ -212,7 +216,17 @@ export default function ReaderWidget() {
   }
 
   return (
-    <div className="widget-container" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 2rem)', overflow: 'hidden' }}>
+    <div 
+      className="widget-container" 
+      style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        height: 'calc(100vh - 2rem)', 
+        overflow: 'hidden',
+        backgroundColor: currentTheme.bg,
+        color: currentTheme.text
+      }}
+    >
       {message && (
         <Toast
           message={message.text}
@@ -222,22 +236,28 @@ export default function ReaderWidget() {
         />
       )}
 
-      {/* Fixed Actions Bar at the top */}
-      <div style={{ flexShrink: 0, width: '100%' }}>
-        {/* Header */}
+      {/* Header - Always visible */}
+      <div style={{ flexShrink: 0, width: '100%', marginBottom: isTopBarVisible ? '0' : '0.5rem' }}>
         <ReaderHeader
           article={article}
           theme={theme}
           onThemeChange={setTheme}
+          isTopBarVisible={isTopBarVisible}
+          onToggleTopBar={() => setIsTopBarVisible(!isTopBarVisible)}
         />
+      </div>
+
+      {/* Fixed Actions Bar at the top */}
+      {isTopBarVisible && (
+      <div style={{ flexShrink: 0, width: '100%' }}>
 
       {/* Article Header */}
       <div style={{ marginBottom: '1rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.4rem', lineHeight: 1.3 }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.4rem', lineHeight: 1.3, color: currentTheme.text }}>
           {article.title || article.url}
         </h1>
         {article.description && (
-          <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: 0 }}>
+          <p style={{ fontSize: '0.9rem', color: currentTheme.secondaryText, marginBottom: 0 }}>
             {article.description}
           </p>
         )}
@@ -256,7 +276,19 @@ export default function ReaderWidget() {
       }} className="reader-actions-grid">
         {/* Column 1: Reading Controls */}
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0.4rem', height: '100%', minWidth: 0 }}>
+          <div 
+            className="card" 
+            style={{ 
+              flex: 1, 
+              display: 'flex', 
+              flexDirection: 'column', 
+              padding: '0.4rem', 
+              height: '100%', 
+              minWidth: 0,
+              backgroundColor: currentTheme.cardBg,
+              borderColor: currentTheme.cardBorder
+            }}
+          >
             <ReadingControls
               article={article}
               fontSize={fontSize}
@@ -269,17 +301,30 @@ export default function ReaderWidget() {
               onStatusDropdownToggle={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
               selectedText={selectedText}
               onCreateHighlight={handleCreateHighlight}
+              theme={theme}
             />
           </div>
         </div>
 
         {/* Column 2: Progress and Page Tracking */}
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0.5rem', height: '100%', minWidth: 0 }}>
+          <div 
+            className="card" 
+            style={{ 
+              flex: 1, 
+              display: 'flex', 
+              flexDirection: 'column', 
+              padding: '0.5rem', 
+              height: '100%', 
+              minWidth: 0,
+              backgroundColor: currentTheme.cardBg,
+              borderColor: currentTheme.cardBorder
+            }}
+          >
             {(article.readingProgress > 0 || article.totalPages) && (
               <div style={{ 
                 height: '4px', 
-                backgroundColor: '#e0e0e0', 
+                backgroundColor: currentTheme.progressBg, 
                 borderRadius: '2px', 
                 overflow: 'hidden', 
                 marginBottom: '0.5rem' 
@@ -301,10 +346,11 @@ export default function ReaderWidget() {
                 onPageChange={handlePageChange}
                 onPagesUpdate={handlePagesUpdate}
                 onError={(error) => setMessage({ text: error, type: 'error' })}
+                theme={theme}
               />
 
               {article.readingProgress > 0 && !article.totalPages && (
-                <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.4rem', textAlign: 'center' }}>
+                <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, marginTop: '0.4rem', textAlign: 'center' }}>
                   {Math.round(article.readingProgress * 100)}% lido
                 </p>
               )}
@@ -319,20 +365,42 @@ export default function ReaderWidget() {
               article={article}
               onTagsUpdate={updateArticleTagsAndCollections}
               onCollectionsUpdate={updateArticleTagsAndCollections}
+              theme={theme}
             />
           </div>
         </div>
 
         {/* Column 4: Highlights Section */}
-        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-          <ArticleHighlights highlights={highlights} />
+        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden', width: '100%' }}>
+          {highlights.length > 0 ? (
+            <ArticleHighlights highlights={highlights} theme={theme} />
+          ) : (
+            <div 
+              className="card" 
+              style={{ 
+                padding: '0.5rem',
+                backgroundColor: currentTheme.cardBg,
+                borderColor: currentTheme.cardBorder,
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, margin: 0 }}>
+                Nenhum highlight ainda
+              </p>
+            </div>
+          )}
         </div>
       </div>
       </div>
+      )}
 
       {/* Separator */}
+      {isTopBarVisible && (
       <div style={{ 
-        borderTop: '2px solid #e0e0e0', 
+        borderTop: `2px solid ${currentTheme.separator}`, 
         marginTop: '1rem', 
         marginBottom: '1rem',
         position: 'relative'
@@ -342,15 +410,16 @@ export default function ReaderWidget() {
           top: '-0.75rem',
           left: '50%',
           transform: 'translateX(-50%)',
-          backgroundColor: 'white',
+          backgroundColor: currentTheme.bg,
           padding: '0 0.5rem',
           fontSize: '0.75rem',
-          color: '#666',
+          color: currentTheme.secondaryText,
           fontWeight: 500
         }}>
           Conteúdo
         </div>
       </div>
+      )}
 
       {/* Article Content - Only content at the bottom */}
       <ArticleContent

@@ -1,5 +1,7 @@
 import StatusDropdown from './StatusDropdown';
 import type { Article } from '../../api/articles';
+import type { Theme } from '../../utils/themeStyles';
+import { themeStyles } from '../../utils/themeStyles';
 
 interface ReadingControlsProps {
   article: Article;
@@ -13,6 +15,7 @@ interface ReadingControlsProps {
   onStatusDropdownToggle: () => void;
   selectedText: string;
   onCreateHighlight: () => void;
+  theme?: Theme;
 }
 
 export default function ReadingControls({
@@ -27,10 +30,13 @@ export default function ReadingControls({
   onStatusDropdownToggle,
   selectedText,
   onCreateHighlight,
+  theme = 'light',
 }: ReadingControlsProps) {
+  const currentTheme = themeStyles[theme];
+  
   return (
     <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', flexWrap: 'wrap', width: '100%' }}>
-      <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+      <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: currentTheme.text }}>
         <span style={{ minWidth: '60px' }}>Altura:</span>
         <input
           type="range"
@@ -40,9 +46,9 @@ export default function ReadingControls({
           onChange={(e) => onFontSizeChange(Number(e.target.value))}
           style={{ width: '70px' }}
         />
-        <span style={{ minWidth: '35px' }}>{fontSize}px</span>
+        <span style={{ minWidth: '35px', color: currentTheme.text }}>{fontSize}px</span>
       </label>
-      <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+      <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: currentTheme.text }}>
         <span style={{ minWidth: '60px' }}>Linha:</span>
         <input
           type="range"
@@ -53,7 +59,7 @@ export default function ReadingControls({
           onChange={(e) => onLineHeightChange(Number(e.target.value))}
           style={{ width: '70px' }}
         />
-        <span style={{ minWidth: '35px' }}>{lineHeight.toFixed(1)}</span>
+        <span style={{ minWidth: '35px', color: currentTheme.text }}>{lineHeight.toFixed(1)}</span>
       </label>
       <StatusDropdown
         article={article}
@@ -61,6 +67,7 @@ export default function ReadingControls({
         onToggle={onStatusDropdownToggle}
         onChange={onStatusChange}
         isUpdating={isUpdatingStatus}
+        theme={theme}
       />
       {selectedText && (
         <button

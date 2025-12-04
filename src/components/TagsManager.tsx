@@ -1,15 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { tagsApi, type Tag } from '../api/tags';
 import Toast from './Toast';
+import type { Theme } from '../utils/themeStyles';
 import '../App.css';
 
 interface TagsManagerProps {
   articleId: string;
   currentTags?: Array<{ tag: Tag | { id: string; name: string } }>;
   onUpdate?: () => void;
+  theme?: Theme;
 }
 
-export default function TagsManager({ articleId, currentTags = [], onUpdate }: TagsManagerProps) {
+export default function TagsManager({ articleId, currentTags = [], onUpdate, theme = 'light' }: TagsManagerProps) {
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [newTagName, setNewTagName] = useState('');
   const [loading, setLoading] = useState(true);
@@ -33,9 +35,18 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate }: T
       // Calculate popover position (fixed is relative to viewport)
       if (buttonRef.current) {
         const rect = buttonRef.current.getBoundingClientRect();
+        const popoverWidth = 300; // Approximate width
+        const viewportWidth = window.innerWidth;
+        let left = rect.left;
+        
+        // Adjust if popover would overflow on the right
+        if (left + popoverWidth > viewportWidth) {
+          left = Math.max(8, viewportWidth - popoverWidth - 8);
+        }
+        
         setPopoverPosition({
           top: rect.bottom + 4,
-          left: rect.left,
+          left: left,
         });
       }
     } else {

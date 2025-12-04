@@ -1,19 +1,15 @@
 import { MutableRefObject, useEffect } from 'react';
 import type { Article } from '../../api/articles';
+import { themeStyles } from '../../utils/themeStyles';
+import type { Theme } from '../../utils/themeStyles';
 
 interface ArticleContentProps {
   article: Article;
   contentRef: MutableRefObject<HTMLDivElement | null>;
-  theme: 'light' | 'dark' | 'sepia';
+  theme: Theme;
   fontSize: number;
   lineHeight: number;
 }
-
-const themeStyles = {
-  light: { bg: '#fff', text: '#333' },
-  dark: { bg: '#1a1a1a', text: '#e0e0e0' },
-  sepia: { bg: '#f4ecd8', text: '#5c4b37' },
-};
 
 /**
  * Check if content is HTML (contains HTML tags)
@@ -104,7 +100,7 @@ export default function ArticleContent({ article, contentRef, theme, fontSize, l
 
       {/* Show images from attributes if available and not already in content */}
       {article.attributes?.images && Array.isArray(article.attributes.images) && article.attributes.images.length > 0 && (
-        <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: `1px solid ${theme === 'dark' ? '#444' : '#e0e0e0'}` }}>
+        <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: `1px solid ${currentTheme.separator}` }}>
           <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', fontWeight: 600 }}>
             Imagens do Artigo
           </h3>
