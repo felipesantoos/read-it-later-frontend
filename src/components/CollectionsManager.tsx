@@ -318,7 +318,7 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                             style={{
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '0.5rem',
+                              gap: '0.25rem',
                               padding: '0.25rem',
                               cursor: 'pointer',
                               borderRadius: '4px',
@@ -331,7 +331,7 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                               checked={isSelected}
                               onChange={() => handleToggleSelection(collection.id)}
                               onClick={(e) => e.stopPropagation()}
-                              style={{ cursor: 'pointer' }}
+                              style={{ cursor: 'pointer', width: '16px', height: '16px', flexShrink: 0 }}
                             />
                             <span style={{ fontSize: '0.75rem', flex: 1 }}>📁 {collection.name}</span>
                             <button
