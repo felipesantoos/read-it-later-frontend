@@ -5,7 +5,7 @@ import { highlightsApi, type Highlight } from '../api/highlights';
 import Toast from '../components/Toast';
 import ReaderHeader from '../components/reader/ReaderHeader';
 import ArticleContent from '../components/reader/ArticleContent';
-import { ArticleTagsAndCollections, ArticleHighlights } from '../components/reader/ArticleMetadata';
+import { ArticleHighlights } from '../components/reader/ArticleMetadata';
 import { useScrollProgress } from '../hooks/useScrollProgress';
 import { validatePageChange } from '../utils/validation';
 import { themeStyles } from '../utils/themeStyles';
@@ -281,60 +281,33 @@ export default function ReaderWidget() {
           onPagesUpdate={handlePagesUpdate}
           onResetProgress={handleResetProgress}
           onTagsUpdate={updateArticleTagsAndCollections}
+          onCollectionsUpdate={updateArticleTagsAndCollections}
         />
       </div>
 
       {/* Fixed Actions Bar at the top */}
       {isTopBarVisible && (
-      <div style={{ flexShrink: 0, width: '100%' }}>
-
-      {/* All Actions and Controls - Horizontal Layout */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'minmax(0, auto) 1fr',
-        gap: '0.5rem',
-        marginBottom: '0.75rem',
-        alignItems: 'stretch',
-        width: '100%',
-        boxSizing: 'border-box',
-        overflow: 'hidden'
-      }} className="reader-actions-grid">
-        {/* Column 1: Collections */}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ flex: 1, height: '100%', minWidth: 0 }}>
-            <ArticleTagsAndCollections
-              article={article}
-              onTagsUpdate={updateArticleTagsAndCollections}
-              onCollectionsUpdate={updateArticleTagsAndCollections}
-              theme={theme}
-            />
+      <div style={{ flexShrink: 0, width: '100%', marginBottom: '0.75rem' }}>
+        {/* Highlights Section */}
+        {highlights.length > 0 ? (
+          <ArticleHighlights highlights={highlights} theme={theme} />
+        ) : (
+          <div 
+            className="card" 
+            style={{ 
+              padding: '0.5rem',
+              backgroundColor: currentTheme.cardBg,
+              borderColor: currentTheme.cardBorder,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, margin: 0 }}>
+              Nenhum highlight ainda
+            </p>
           </div>
-        </div>
-
-        {/* Column 2: Highlights Section */}
-        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden', width: '100%' }}>
-          {highlights.length > 0 ? (
-            <ArticleHighlights highlights={highlights} theme={theme} />
-          ) : (
-            <div 
-              className="card" 
-              style={{ 
-                padding: '0.5rem',
-                backgroundColor: currentTheme.cardBg,
-                borderColor: currentTheme.cardBorder,
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, margin: 0 }}>
-                Nenhum highlight ainda
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
+        )}
       </div>
       )}
 

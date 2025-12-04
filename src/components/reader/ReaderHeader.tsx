@@ -6,6 +6,7 @@ import { themeStyles } from '../../utils/themeStyles';
 import { validatePages } from '../../utils/validation';
 import StatusDropdown from './StatusDropdown';
 import TagsManager from '../TagsManager';
+import CollectionsManager from '../CollectionsManager';
 
 interface ReaderHeaderProps {
   article: Article;
@@ -28,6 +29,7 @@ interface ReaderHeaderProps {
   onPagesUpdate: (totalPages: number | null, currentPage: number | null) => Promise<void>;
   onResetProgress: () => Promise<void>;
   onTagsUpdate?: () => void;
+  onCollectionsUpdate?: () => void;
 }
 
 export default function ReaderHeader({ 
@@ -50,7 +52,8 @@ export default function ReaderHeader({
   onPageChange,
   onPagesUpdate,
   onResetProgress,
-  onTagsUpdate
+  onTagsUpdate,
+  onCollectionsUpdate
 }: ReaderHeaderProps) {
   const navigate = useNavigate();
   const currentTheme = themeStyles[theme];
@@ -412,6 +415,15 @@ export default function ReaderHeader({
           articleId={article.id}
           currentTags={article.articleTags}
           onUpdate={onTagsUpdate}
+          theme={theme}
+          compact={true}
+        />
+
+        {/* Collections Button */}
+        <CollectionsManager
+          articleId={article.id}
+          currentCollections={article.articleCollections}
+          onUpdate={onCollectionsUpdate}
           theme={theme}
           compact={true}
         />
