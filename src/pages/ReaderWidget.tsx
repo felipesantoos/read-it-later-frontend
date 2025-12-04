@@ -244,66 +244,74 @@ export default function ReaderWidget() {
       </div>
 
       {/* All Actions and Controls - Horizontal Layout */}
-      <div className="actions-grid-3" style={{ marginBottom: '0.75rem' }}>
+      <div className="actions-grid-3" style={{ marginBottom: '0.75rem', alignItems: 'stretch' }}>
         {/* Column 1: Reading Controls */}
-        <div>
-          <ReadingControls
-            article={article}
-            fontSize={fontSize}
-            lineHeight={lineHeight}
-            onFontSizeChange={setFontSize}
-            onLineHeightChange={setLineHeight}
-            onStatusChange={handleStatusChange}
-            isUpdatingStatus={isUpdatingStatus}
-            isStatusDropdownOpen={isStatusDropdownOpen}
-            onStatusDropdownToggle={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
-            selectedText={selectedText}
-            onCreateHighlight={handleCreateHighlight}
-          />
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0.4rem', height: '100%' }}>
+            <ReadingControls
+              article={article}
+              fontSize={fontSize}
+              lineHeight={lineHeight}
+              onFontSizeChange={setFontSize}
+              onLineHeightChange={setLineHeight}
+              onStatusChange={handleStatusChange}
+              isUpdatingStatus={isUpdatingStatus}
+              isStatusDropdownOpen={isStatusDropdownOpen}
+              onStatusDropdownToggle={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+              selectedText={selectedText}
+              onCreateHighlight={handleCreateHighlight}
+            />
+          </div>
         </div>
 
         {/* Column 2: Progress and Page Tracking */}
-        <div>
-          {(article.readingProgress > 0 || article.totalPages) && (
-            <div style={{ 
-              height: '4px', 
-              backgroundColor: '#e0e0e0', 
-              borderRadius: '2px', 
-              overflow: 'hidden', 
-              marginBottom: '0.5rem' 
-            }}>
-              <div
-                style={{
-                  height: '100%',
-                  width: `${article.readingProgress * 100}%`,
-                  backgroundColor: '#007bff',
-                  transition: 'width 0.3s',
-                }}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0.5rem', height: '100%' }}>
+            {(article.readingProgress > 0 || article.totalPages) && (
+              <div style={{ 
+                height: '4px', 
+                backgroundColor: '#e0e0e0', 
+                borderRadius: '2px', 
+                overflow: 'hidden', 
+                marginBottom: '0.5rem' 
+              }}>
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${article.readingProgress * 100}%`,
+                    backgroundColor: '#007bff',
+                    transition: 'width 0.3s',
+                  }}
+                />
+              </div>
+            )}
+
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <PageTracker
+                article={article}
+                onPageChange={handlePageChange}
+                onPagesUpdate={handlePagesUpdate}
+                onError={(error) => setMessage({ text: error, type: 'error' })}
               />
+
+              {article.readingProgress > 0 && !article.totalPages && (
+                <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.4rem', textAlign: 'center' }}>
+                  {Math.round(article.readingProgress * 100)}% lido
+                </p>
+              )}
             </div>
-          )}
-
-          <PageTracker
-            article={article}
-            onPageChange={handlePageChange}
-            onPagesUpdate={handlePagesUpdate}
-            onError={(error) => setMessage({ text: error, type: 'error' })}
-          />
-
-          {article.readingProgress > 0 && !article.totalPages && (
-            <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.4rem', textAlign: 'center' }}>
-              {Math.round(article.readingProgress * 100)}% lido
-            </p>
-          )}
+          </div>
         </div>
 
         {/* Column 3: Tags and Collections */}
-        <div>
-          <ArticleTagsAndCollections
-            article={article}
-            onTagsUpdate={updateArticleTagsAndCollections}
-            onCollectionsUpdate={updateArticleTagsAndCollections}
-          />
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, height: '100%' }}>
+            <ArticleTagsAndCollections
+              article={article}
+              onTagsUpdate={updateArticleTagsAndCollections}
+              onCollectionsUpdate={updateArticleTagsAndCollections}
+            />
+          </div>
         </div>
 
         {/* Row 2: Highlights Section - spans all columns */}
@@ -311,6 +319,28 @@ export default function ReaderWidget() {
           <ArticleHighlights highlights={highlights} />
         </div>
       </div>
+      </div>
+
+      {/* Separator */}
+      <div style={{ 
+        borderTop: '2px solid #e0e0e0', 
+        marginTop: '1rem', 
+        marginBottom: '1rem',
+        position: 'relative'
+      }}>
+        <div style={{
+          position: 'absolute',
+          top: '-0.75rem',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: 'white',
+          padding: '0 0.5rem',
+          fontSize: '0.75rem',
+          color: '#666',
+          fontWeight: 500
+        }}>
+          Conteúdo
+        </div>
       </div>
 
       {/* Article Content - Only content at the bottom */}

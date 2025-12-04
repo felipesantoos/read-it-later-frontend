@@ -78,7 +78,7 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate }: T
   const assignedTagIds = new Set(currentTags.map(at => at.tag.id));
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {message && (
         <Toast
           message={message.text}
@@ -88,7 +88,7 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate }: T
         />
       )}
 
-      <div className="card mb-1" style={{ padding: '0.5rem' }}>
+      <div className="card" style={{ padding: '0.5rem', flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
         <h4 style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Tags</h4>
         
         {/* Create new tag */}
@@ -115,55 +115,57 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate }: T
         </div>
 
         {/* Tags list */}
-        {loading ? (
-          <p style={{ fontSize: '0.75rem', color: '#666' }}>Carregando...</p>
-        ) : allTags.length === 0 ? (
-          <p style={{ fontSize: '0.75rem', color: '#666' }}>Nenhuma tag ainda</p>
-        ) : (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-            {allTags.map((tag) => {
-              const isAssigned = assignedTagIds.has(tag.id);
-              return (
-                <div
-                  key={tag.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    padding: '0.25rem 0.5rem',
-                    backgroundColor: isAssigned ? '#007bff' : '#e9ecef',
-                    color: isAssigned ? 'white' : '#333',
-                    borderRadius: '12px',
-                    fontSize: '0.75rem',
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => handleToggleTag(tag.id)}
-                  title={isAssigned ? 'Clique para remover' : 'Clique para adicionar'}
-                >
-                  <span>{tag.name}</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteTag(tag.id);
-                    }}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {loading ? (
+            <p style={{ fontSize: '0.75rem', color: '#666' }}>Carregando...</p>
+          ) : allTags.length === 0 ? (
+            <p style={{ fontSize: '0.75rem', color: '#666' }}>Nenhuma tag ainda</p>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+              {allTags.map((tag) => {
+                const isAssigned = assignedTagIds.has(tag.id);
+                return (
+                  <div
+                    key={tag.id}
                     style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'inherit',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      padding: '0.25rem 0.5rem',
+                      backgroundColor: isAssigned ? '#007bff' : '#e9ecef',
+                      color: isAssigned ? 'white' : '#333',
+                      borderRadius: '12px',
+                      fontSize: '0.75rem',
                       cursor: 'pointer',
-                      fontSize: '0.8rem',
-                      padding: 0,
-                      marginLeft: '0.25rem',
                     }}
-                    title="Deletar tag"
+                    onClick={() => handleToggleTag(tag.id)}
+                    title={isAssigned ? 'Clique para remover' : 'Clique para adicionar'}
                   >
-                    ×
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                    <span>{tag.name}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteTag(tag.id);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'inherit',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem',
+                        padding: 0,
+                        marginLeft: '0.25rem',
+                      }}
+                      title="Deletar tag"
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

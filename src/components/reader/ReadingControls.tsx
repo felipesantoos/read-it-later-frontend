@@ -29,7 +29,7 @@ export default function ReadingControls({
   onCreateHighlight,
 }: ReadingControlsProps) {
   return (
-    <div className="card mb-1" style={{ padding: '0.4rem', display: 'flex', gap: '0.3rem', alignItems: 'center', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', flexWrap: 'wrap', width: '100%' }}>
       <label style={{ fontSize: '0.75rem' }}>
         A: 
         <input

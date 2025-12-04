@@ -87,7 +87,7 @@ export default function PageTracker({ article, onPageChange, onPagesUpdate, onEr
 
   if (article.totalPages && article.totalPages > 0) {
     return (
-      <div className="card" style={{ padding: '0.5rem', marginBottom: '0.4rem' }}>
+      <div style={{ padding: '0', marginBottom: '0' }}>
         {!isEditingPages ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <div style={{ fontSize: '0.85rem', fontWeight: 500 }}>
@@ -157,7 +157,7 @@ export default function PageTracker({ article, onPageChange, onPagesUpdate, onEr
   }
 
   return (
-    <div className="card" style={{ padding: '0.5rem', marginBottom: '0.4rem' }}>
+    <div style={{ padding: '0', marginBottom: '0' }}>
       {!isEditingPages ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <span style={{ fontSize: '0.8rem', color: '#666' }}>Rastreamento de páginas não configurado</span>

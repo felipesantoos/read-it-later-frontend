@@ -15,15 +15,15 @@ interface ArticleHighlightsProps {
 
 export function ArticleTagsAndCollections({ article, onTagsUpdate, onCollectionsUpdate }: ArticleTagsAndCollectionsProps) {
   return (
-    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-      <div className="card" style={{ padding: '0.5rem', flex: 1 }}>
+    <div style={{ display: 'flex', gap: '0.5rem', height: '100%', alignItems: 'stretch' }}>
+      <div style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
         <TagsManager
           articleId={article.id}
           currentTags={article.articleTags}
           onUpdate={onTagsUpdate}
         />
       </div>
-      <div className="card" style={{ padding: '0.5rem', flex: 1 }}>
+      <div style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
         <CollectionsManager
           articleId={article.id}
           currentCollections={article.articleCollections}

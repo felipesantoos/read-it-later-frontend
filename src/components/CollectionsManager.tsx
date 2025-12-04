@@ -82,7 +82,7 @@ export default function CollectionsManager({ articleId, currentCollections = [],
   const assignedCollectionIds = new Set(currentCollections.map(ac => ac.collection.id));
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {message && (
         <Toast
           message={message.text}
@@ -92,7 +92,7 @@ export default function CollectionsManager({ articleId, currentCollections = [],
         />
       )}
 
-      <div className="card mb-1" style={{ padding: '0.5rem' }}>
+      <div className="card" style={{ padding: '0.5rem', flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
         <h4 style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Coleções</h4>
         
         {/* Create new collection */}
@@ -119,54 +119,56 @@ export default function CollectionsManager({ articleId, currentCollections = [],
         </div>
 
         {/* Collections list */}
-        {loading ? (
-          <p style={{ fontSize: '0.75rem', color: '#666' }}>Carregando...</p>
-        ) : allCollections.length === 0 ? (
-          <p style={{ fontSize: '0.75rem', color: '#666' }}>Nenhuma coleção ainda</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-            {allCollections.map((collection) => {
-              const isAssigned = assignedCollectionIds.has(collection.id);
-              return (
-                <div
-                  key={collection.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '0.25rem 0.5rem',
-                    backgroundColor: isAssigned ? '#28a745' : '#f8f9fa',
-                    color: isAssigned ? 'white' : '#333',
-                    borderRadius: '4px',
-                    fontSize: '0.75rem',
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => handleToggleCollection(collection.id)}
-                  title={isAssigned ? 'Clique para remover' : 'Clique para adicionar'}
-                >
-                  <span>📁 {collection.name}</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteCollection(collection.id);
-                    }}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {loading ? (
+            <p style={{ fontSize: '0.75rem', color: '#666' }}>Carregando...</p>
+          ) : allCollections.length === 0 ? (
+            <p style={{ fontSize: '0.75rem', color: '#666' }}>Nenhuma coleção ainda</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              {allCollections.map((collection) => {
+                const isAssigned = assignedCollectionIds.has(collection.id);
+                return (
+                  <div
+                    key={collection.id}
                     style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'inherit',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.25rem 0.5rem',
+                      backgroundColor: isAssigned ? '#28a745' : '#f8f9fa',
+                      color: isAssigned ? 'white' : '#333',
+                      borderRadius: '4px',
+                      fontSize: '0.75rem',
                       cursor: 'pointer',
-                      fontSize: '0.9rem',
-                      padding: '0 0.25rem',
                     }}
-                    title="Deletar coleção"
+                    onClick={() => handleToggleCollection(collection.id)}
+                    title={isAssigned ? 'Clique para remover' : 'Clique para adicionar'}
                   >
-                    ×
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                    <span>📁 {collection.name}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteCollection(collection.id);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'inherit',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                        padding: '0 0.25rem',
+                      }}
+                      title="Deletar coleção"
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
