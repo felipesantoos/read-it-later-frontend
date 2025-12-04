@@ -7,6 +7,9 @@ import { validatePages } from '../../utils/validation';
 import StatusDropdown from './StatusDropdown';
 import TagsManager from '../TagsManager';
 import CollectionsManager from '../CollectionsManager';
+import HighlightsManager from '../HighlightsManager';
+import type { Highlight } from '../../api/highlights';
+import type { MutableRefObject } from 'react';
 
 interface ReaderHeaderProps {
   article: Article;
@@ -22,14 +25,15 @@ interface ReaderHeaderProps {
   isUpdatingStatus: boolean;
   isStatusDropdownOpen: boolean;
   onStatusDropdownToggle: () => void;
-  selectedText: string;
-  onCreateHighlight: () => void;
   readingProgress: number;
   onPageChange: (newPage: number) => Promise<void>;
   onPagesUpdate: (totalPages: number | null, currentPage: number | null) => Promise<void>;
   onResetProgress: () => Promise<void>;
   onTagsUpdate?: () => void;
   onCollectionsUpdate?: () => void;
+  highlights?: Highlight[];
+  onHighlightsUpdate?: () => void;
+  contentRef?: MutableRefObject<HTMLDivElement | null>;
 }
 
 export default function ReaderHeader({ 
@@ -46,14 +50,15 @@ export default function ReaderHeader({
   isUpdatingStatus,
   isStatusDropdownOpen,
   onStatusDropdownToggle,
-  selectedText,
-  onCreateHighlight,
   readingProgress,
   onPageChange,
   onPagesUpdate,
   onResetProgress,
   onTagsUpdate,
-  onCollectionsUpdate
+  onCollectionsUpdate,
+  highlights,
+  onHighlightsUpdate,
+  contentRef
 }: ReaderHeaderProps) {
   const navigate = useNavigate();
   const currentTheme = themeStyles[theme];
@@ -428,16 +433,15 @@ export default function ReaderHeader({
           compact={true}
         />
 
-        {/* Highlight Button */}
-        {selectedText && (
-          <button
-            className="primary"
-            onClick={onCreateHighlight}
-            style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
-          >
-            ✨ Highlight
-          </button>
-        )}
+        {/* Highlights Button */}
+        <HighlightsManager
+          articleId={article.id}
+          currentHighlights={highlights}
+          onUpdate={onHighlightsUpdate}
+          theme={theme}
+          compact={true}
+          contentRef={contentRef}
+        />
 
         {/* Theme Button */}
         <button

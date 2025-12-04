@@ -5,7 +5,7 @@ import { highlightsApi, type Highlight } from '../api/highlights';
 import Toast from '../components/Toast';
 import ReaderHeader from '../components/reader/ReaderHeader';
 import ArticleContent from '../components/reader/ArticleContent';
-import { ArticleHighlights } from '../components/reader/ArticleMetadata';
+import HighlightToolbar from '../components/reader/HighlightToolbar';
 import { useScrollProgress } from '../hooks/useScrollProgress';
 import { validatePageChange } from '../utils/validation';
 import { themeStyles } from '../utils/themeStyles';
@@ -22,7 +22,6 @@ export default function ReaderWidget() {
   const [lineHeight, setLineHeight] = useState(1.6);
   const [theme, setTheme] = useState<'light' | 'dark' | 'sepia'>('light');
   const contentRef = useRef<HTMLDivElement | null>(null) as MutableRefObject<HTMLDivElement | null>;
-  const [selectedText, setSelectedText] = useState<string>('');
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isTopBarVisible, setIsTopBarVisible] = useState(true);
@@ -47,20 +46,6 @@ export default function ReaderWidget() {
     onArticleUpdate: updateArticleState,
   });
 
-  useEffect(() => {
-    // Handle text selection
-    const handleSelection = () => {
-      const selection = window.getSelection();
-      if (selection && selection.toString().trim()) {
-        setSelectedText(selection.toString().trim());
-      } else {
-        setSelectedText('');
-      }
-    };
-
-    document.addEventListener('selectionchange', handleSelection);
-    return () => document.removeEventListener('selectionchange', handleSelection);
-  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -161,21 +146,49 @@ export default function ReaderWidget() {
     }
   }
 
-  async function handleCreateHighlight() {
-    if (!selectedText || !article) return;
+  async function handleCreateHighlight(text: string, position: string) {
+    if (!article) return;
 
     try {
       await highlightsApi.create({
         articleId: article.id,
-        text: selectedText,
+        text: text,
+        position: position,
       });
       setMessage({ text: 'Highlight criado!', type: 'success' });
-      setSelectedText('');
       loadHighlights();
     } catch (error) {
       console.error('Error creating highlight:', error);
       setMessage({ text: 'Erro ao criar highlight', type: 'error' });
+      throw error;
     }
+  }
+
+  async function handleCreateHighlightWithNote(text: string, position: string, noteContent: string) {
+    if (!article) return;
+
+    try {
+      // Create highlight first
+      const highlightResponse = await highlightsApi.create({
+        articleId: article.id,
+        text: text,
+        position: position,
+      });
+      
+      // Then create note
+      await highlightsApi.createNote(highlightResponse.data.id, noteContent);
+      
+      setMessage({ text: 'Highlight com nota criado!', type: 'success' });
+      loadHighlights();
+    } catch (error) {
+      console.error('Error creating highlight with note:', error);
+      setMessage({ text: 'Erro ao criar highlight com nota', type: 'error' });
+      throw error;
+    }
+  }
+
+  async function handleHighlightsUpdate() {
+    await loadHighlights();
   }
 
   async function handleStatusChange(newStatus: Article['status']) {
@@ -274,42 +287,17 @@ export default function ReaderWidget() {
           isUpdatingStatus={isUpdatingStatus}
           isStatusDropdownOpen={isStatusDropdownOpen}
           onStatusDropdownToggle={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
-          selectedText={selectedText}
-          onCreateHighlight={handleCreateHighlight}
           readingProgress={article.readingProgress}
           onPageChange={handlePageChange}
           onPagesUpdate={handlePagesUpdate}
           onResetProgress={handleResetProgress}
           onTagsUpdate={updateArticleTagsAndCollections}
           onCollectionsUpdate={updateArticleTagsAndCollections}
+          highlights={highlights}
+          onHighlightsUpdate={handleHighlightsUpdate}
+          contentRef={contentRef}
         />
       </div>
-
-      {/* Fixed Actions Bar at the top */}
-      {isTopBarVisible && (
-      <div style={{ flexShrink: 0, width: '100%', marginBottom: '0.75rem' }}>
-        {/* Highlights Section */}
-        {highlights.length > 0 ? (
-          <ArticleHighlights highlights={highlights} theme={theme} />
-        ) : (
-          <div 
-            className="card" 
-            style={{ 
-              padding: '0.5rem',
-              backgroundColor: currentTheme.cardBg,
-              borderColor: currentTheme.cardBorder,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, margin: 0 }}>
-              Nenhum highlight ainda
-            </p>
-          </div>
-        )}
-      </div>
-      )}
 
       {/* Separator */}
       {isTopBarVisible && (
@@ -336,13 +324,25 @@ export default function ReaderWidget() {
       )}
 
       {/* Article Content - Only content at the bottom */}
-      <ArticleContent
-        article={article}
-        contentRef={contentRef}
-        theme={theme}
-        fontSize={fontSize}
-        lineHeight={lineHeight}
-      />
+      <div style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
+        <ArticleContent
+          article={article}
+          contentRef={contentRef}
+          theme={theme}
+          fontSize={fontSize}
+          lineHeight={lineHeight}
+          highlights={highlights}
+        />
+        
+        {/* Highlight Toolbar - appears near selected text */}
+        <HighlightToolbar
+          articleId={article.id}
+          onHighlight={handleCreateHighlight}
+          onHighlightWithNote={handleCreateHighlightWithNote}
+          theme={theme}
+          contentRef={contentRef}
+        />
+      </div>
     </div>
   );
 }

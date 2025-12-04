@@ -1,5 +1,6 @@
-import { MutableRefObject, useEffect } from 'react';
+import { MutableRefObject, useEffect, useRef } from 'react';
 import type { Article } from '../../api/articles';
+import type { Highlight } from '../../api/highlights';
 import { themeStyles } from '../../utils/themeStyles';
 import type { Theme } from '../../utils/themeStyles';
 
@@ -9,6 +10,7 @@ interface ArticleContentProps {
   theme: Theme;
   fontSize: number;
   lineHeight: number;
+  highlights?: Highlight[];
 }
 
 /**
@@ -18,7 +20,7 @@ function isHtml(content: string): boolean {
   return /<[a-z][\s\S]*>/i.test(content);
 }
 
-export default function ArticleContent({ article, contentRef, theme, fontSize, lineHeight }: ArticleContentProps) {
+export default function ArticleContent({ article, contentRef, theme, fontSize, lineHeight, highlights = [] }: ArticleContentProps) {
   const currentTheme = themeStyles[theme];
 
   // Handle image errors after HTML is rendered
@@ -65,6 +67,67 @@ export default function ArticleContent({ article, contentRef, theme, fontSize, l
   // Determine if content is HTML or plain text
   const isContentHtml = article.content ? isHtml(article.content) : false;
 
+  // Process content to highlight text
+  const processContentWithHighlights = (content: string, isHtmlContent: boolean): string => {
+    if (!content || highlights.length === 0) {
+      return content;
+    }
+
+    // Sort highlights by text length (longest first) to avoid partial matches
+    const sortedHighlights = [...highlights].sort((a, b) => b.text.length - a.text.length);
+
+    if (isHtmlContent) {
+      // For HTML content, use a simpler approach with string replacement
+      // Escape HTML in highlight text to avoid breaking the structure
+      let processedContent = content;
+      sortedHighlights.forEach((highlight) => {
+        const text = highlight.text.trim();
+        if (!text) return;
+
+        // Escape special regex characters
+        const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(escapedText, 'gi');
+        
+        const hasNotes = highlight.notes && highlight.notes.length > 0;
+        const highlightColor = theme === 'dark' ? '#664d00' : theme === 'sepia' ? '#f0e68c' : '#fff3cd';
+        const borderStyle = hasNotes ? `border-bottom: 2px solid ${theme === 'dark' ? '#ffc107' : '#ff9800'};` : '';
+        
+        // Replace with highlighted version (only first occurrence)
+        processedContent = processedContent.replace(regex, (match) => {
+          return `<mark data-highlight-id="${highlight.id}" data-has-notes="${hasNotes}" style="background-color: ${highlightColor}; padding: 0.1em 0; border-radius: 2px; cursor: pointer; ${borderStyle}">${match}</mark>`;
+        });
+      });
+
+      return processedContent;
+    } else {
+      // For plain text, simple replacement
+      let processedContent = content;
+      sortedHighlights.forEach((highlight) => {
+        const text = highlight.text.trim();
+        if (!text) return;
+
+        // Escape special regex characters
+        const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(escapedText, 'g');
+
+        const hasNotes = highlight.notes && highlight.notes.length > 0;
+        const highlightColor = theme === 'dark' ? '#664d00' : theme === 'sepia' ? '#f0e68c' : '#fff3cd';
+        const borderStyle = hasNotes ? `border-bottom: 2px solid ${theme === 'dark' ? '#ffc107' : '#ff9800'};` : '';
+        
+        processedContent = processedContent.replace(regex, (match) => {
+          return `<mark data-highlight-id="${highlight.id}" data-has-notes="${hasNotes}" style="background-color: ${highlightColor}; padding: 0.1em 0; border-radius: 2px; cursor: pointer; ${borderStyle}">${match}</mark>`;
+        });
+      });
+
+      return processedContent;
+    }
+  };
+
+  // Get processed content
+  const processedContent = article.content 
+    ? processContentWithHighlights(article.content, isContentHtml)
+    : null;
+
   return (
     <div
       ref={contentRef}
@@ -106,16 +169,23 @@ export default function ArticleContent({ article, contentRef, theme, fontSize, l
         )}
       </div>
 
-      {article.content ? (
+      {processedContent ? (
         isContentHtml ? (
           <div
-            dangerouslySetInnerHTML={{ __html: article.content }}
+            dangerouslySetInnerHTML={{ 
+              __html: processedContent
+            }}
             style={{
               maxWidth: '100%',
             }}
           />
         ) : (
-          <div style={{ whiteSpace: 'pre-wrap' }}>{article.content}</div>
+          <div 
+            style={{ whiteSpace: 'pre-wrap' }}
+            dangerouslySetInnerHTML={{ 
+              __html: processedContent
+            }}
+          />
         )
       ) : (
         <div>
