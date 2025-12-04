@@ -54,12 +54,10 @@ export function useScrollProgress({ contentRef, article, onArticleUpdate }: UseS
             updatedArticle = response.data;
           }
 
-          // Update status if needed
+          // Update status to READING when article is started (but not auto-update to FINISHED)
           let newStatus: Article['status'] | undefined;
           if (progress > 0 && currentArticle.status === 'UNREAD') {
             newStatus = 'READING';
-          } else if (progress >= 0.95) {
-            newStatus = 'FINISHED';
           }
 
           if (newStatus && newStatus !== currentArticle.status) {

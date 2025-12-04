@@ -13,6 +13,8 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const statusButtonRef = useRef<HTMLSpanElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; right?: number } | null>(null);
 
   const handleStatusChange = async (newStatus: Article['status']) => {
     if (isUpdating) return;
@@ -76,21 +78,18 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
 
   const allStatuses: Article['status'][] = ['UNREAD', 'READING', 'FINISHED', 'ARCHIVED'];
 
-  // Fechar dropdown ao clicar fora
+  // Calculate dropdown position when opened
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target as Node)) {
-        setIsStatusDropdownOpen(false);
-      }
-    };
-
-    if (isStatusDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+    if (isStatusDropdownOpen && statusButtonRef.current) {
+      const rect = statusButtonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+        left: rect.left,
+      });
+    } else {
+      setDropdownPosition(null);
     }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
   }, [isStatusDropdownOpen]);
 
   const handleStatusSelect = async (newStatus: Article['status']) => {
@@ -140,6 +139,7 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
               )}
               <div ref={statusDropdownRef} style={{ position: 'relative' }}>
                 <span
+                  ref={statusButtonRef}
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsStatusDropdownOpen(!isStatusDropdownOpen);
@@ -164,22 +164,34 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
                 >
                   {statusLabels[article.status]} ▼
                 </span>
-                {isStatusDropdownOpen && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      right: 0,
-                      marginTop: '0.25rem',
-                      backgroundColor: 'white',
-                      border: '1px solid #ddd',
-                      borderRadius: '4px',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                      zIndex: 1000,
-                      minWidth: '120px',
-                      overflow: 'hidden',
-                    }}
-                  >
+                {isStatusDropdownOpen && dropdownPosition && (
+                  <>
+                    <div
+                      style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: 9999,
+                      }}
+                      onClick={() => setIsStatusDropdownOpen(false)}
+                    />
+                    <div
+                      style={{
+                        position: 'fixed',
+                        top: `${dropdownPosition.top}px`,
+                        right: `${dropdownPosition.right}px`,
+                        backgroundColor: 'white',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                        zIndex: 10000,
+                        minWidth: '120px',
+                        overflow: 'hidden',
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                     {allStatuses.map((status) => (
                       <div
                         key={status}
@@ -223,7 +235,8 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
                         )}
                       </div>
                     ))}
-                  </div>
+                    </div>
+                  </>
                 )}
               </div>
             </div>

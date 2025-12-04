@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import type { Article } from '../../api/articles';
 import { statusColors, statusLabels, allStatuses } from '../../constants/articleStatus';
 
@@ -12,27 +12,26 @@ interface StatusDropdownProps {
 
 export default function StatusDropdown({ article, isOpen, onToggle, onChange, isUpdating = false }: StatusDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLSpanElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
 
-  // Fechar dropdown ao clicar fora
+  // Calculate dropdown position when opened
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        onToggle();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 4,
+        left: rect.left,
+      });
+    } else {
+      setDropdownPosition(null);
     }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen, onToggle]);
+  }, [isOpen]);
 
   return (
     <div ref={dropdownRef} style={{ position: 'relative' }}>
       <span
+        ref={buttonRef}
         onClick={onToggle}
         style={{
           fontSize: '0.75rem',
@@ -57,22 +56,34 @@ export default function StatusDropdown({ article, isOpen, onToggle, onChange, is
       >
         Status: {statusLabels[article.status]} ▼
       </span>
-      {isOpen && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            marginTop: '0.25rem',
-            backgroundColor: 'white',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-            zIndex: 1000,
-            minWidth: '120px',
-            overflow: 'hidden',
-          }}
-        >
+      {isOpen && dropdownPosition && (
+        <>
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 9999,
+            }}
+            onClick={onToggle}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              top: `${dropdownPosition.top}px`,
+              left: `${dropdownPosition.left}px`,
+              backgroundColor: 'white',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              zIndex: 10000,
+              minWidth: '120px',
+              overflow: 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
           {allStatuses.map((status) => (
             <div
               key={status}
@@ -113,7 +124,8 @@ export default function StatusDropdown({ article, isOpen, onToggle, onChange, is
               )}
             </div>
           ))}
-        </div>
+          </div>
+        </>
       )}
     </div>
   );
