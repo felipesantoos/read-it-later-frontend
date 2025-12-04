@@ -243,25 +243,27 @@ export default function ReaderWidget() {
         )}
       </div>
 
-      {/* All Actions and Controls - Grouped at the top */}
-      <div style={{ marginBottom: '0.75rem' }}>
-        {/* Reading Controls */}
-        <ReadingControls
-          article={article}
-          fontSize={fontSize}
-          lineHeight={lineHeight}
-          onFontSizeChange={setFontSize}
-          onLineHeightChange={setLineHeight}
-          onStatusChange={handleStatusChange}
-          isUpdatingStatus={isUpdatingStatus}
-          isStatusDropdownOpen={isStatusDropdownOpen}
-          onStatusDropdownToggle={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
-          selectedText={selectedText}
-          onCreateHighlight={handleCreateHighlight}
-        />
+      {/* All Actions and Controls - Horizontal Layout */}
+      <div className="actions-grid-3" style={{ marginBottom: '0.75rem' }}>
+        {/* Column 1: Reading Controls */}
+        <div>
+          <ReadingControls
+            article={article}
+            fontSize={fontSize}
+            lineHeight={lineHeight}
+            onFontSizeChange={setFontSize}
+            onLineHeightChange={setLineHeight}
+            onStatusChange={handleStatusChange}
+            isUpdatingStatus={isUpdatingStatus}
+            isStatusDropdownOpen={isStatusDropdownOpen}
+            onStatusDropdownToggle={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+            selectedText={selectedText}
+            onCreateHighlight={handleCreateHighlight}
+          />
+        </div>
 
-        {/* Progress and Page Tracking */}
-        <div style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+        {/* Column 2: Progress and Page Tracking */}
+        <div>
           {(article.readingProgress > 0 || article.totalPages) && (
             <div style={{ 
               height: '4px', 
@@ -295,16 +297,20 @@ export default function ReaderWidget() {
           )}
         </div>
 
-          {/* Tags and Collections */}
+        {/* Column 3: Tags and Collections */}
+        <div>
           <ArticleTagsAndCollections
             article={article}
             onTagsUpdate={updateArticleTagsAndCollections}
             onCollectionsUpdate={updateArticleTagsAndCollections}
           />
+        </div>
 
-          {/* Highlights Section */}
+        {/* Row 2: Highlights Section - spans all columns */}
+        <div style={{ gridColumn: '1 / -1' }}>
           <ArticleHighlights highlights={highlights} />
         </div>
+      </div>
       </div>
 
       {/* Article Content - Only content at the bottom */}

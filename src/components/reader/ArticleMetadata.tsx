@@ -15,17 +15,21 @@ interface ArticleHighlightsProps {
 
 export function ArticleTagsAndCollections({ article, onTagsUpdate, onCollectionsUpdate }: ArticleTagsAndCollectionsProps) {
   return (
-    <div className="card" style={{ padding: '0.5rem', marginBottom: '0.5rem' }}>
-      <TagsManager
-        articleId={article.id}
-        currentTags={article.articleTags}
-        onUpdate={onTagsUpdate}
-      />
-      <CollectionsManager
-        articleId={article.id}
-        currentCollections={article.articleCollections}
-        onUpdate={onCollectionsUpdate}
-      />
+    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+      <div className="card" style={{ padding: '0.5rem', flex: 1 }}>
+        <TagsManager
+          articleId={article.id}
+          currentTags={article.articleTags}
+          onUpdate={onTagsUpdate}
+        />
+      </div>
+      <div className="card" style={{ padding: '0.5rem', flex: 1 }}>
+        <CollectionsManager
+          articleId={article.id}
+          currentCollections={article.articleCollections}
+          onUpdate={onCollectionsUpdate}
+        />
+      </div>
     </div>
   );
 }

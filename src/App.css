@@ -43,6 +43,28 @@
   margin-top: 0.5rem;
 }
 
+.actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.actions-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .actions-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .actions-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
 button {
   padding: 0.5rem 1rem;
   border: none;
