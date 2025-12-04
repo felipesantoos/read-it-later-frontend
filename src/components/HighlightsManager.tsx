@@ -32,6 +32,7 @@ export default function HighlightsManager({
   const [noteContent, setNoteContent] = useState('');
   const [highlightForNote, setHighlightForNote] = useState<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (currentHighlights.length > 0) {
@@ -65,6 +66,27 @@ export default function HighlightsManager({
       setNoteContent('');
       setHighlightForNote(null);
     }
+  }, [showPopover]);
+
+  // Handle click outside to close popover
+  useEffect(() => {
+    if (!showPopover) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        setShowPopover(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, [showPopover]);
 
   async function loadHighlights() {
@@ -235,12 +257,11 @@ export default function HighlightsManager({
                   right: 0,
                   bottom: 0,
                   zIndex: 9999,
-                }}
-                onClick={() => {
-                  setShowPopover(false);
+                  pointerEvents: 'none',
                 }}
               />
               <div
+                ref={popoverRef}
                 style={{
                   position: 'fixed',
                   top: `${popoverPosition.top}px`,
@@ -254,6 +275,7 @@ export default function HighlightsManager({
                   maxHeight: '500px',
                   display: 'flex',
                   flexDirection: 'column',
+                  pointerEvents: 'auto',
                 }}
                 onClick={(e) => e.stopPropagation()}
               >

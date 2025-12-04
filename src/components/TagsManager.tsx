@@ -23,6 +23,7 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
   const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadTags();
@@ -54,6 +55,30 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
     } else {
       setPopoverPosition(null);
     }
+  }, [showPopover, currentTags]);
+
+  // Handle click outside to close popover
+  useEffect(() => {
+    if (!showPopover) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        setShowPopover(false);
+        setSearchQuery('');
+        const assignedIds = new Set(currentTags.map(at => at.tag.id));
+        setSelectedTagIds(assignedIds);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, [showPopover, currentTags]);
 
 
@@ -216,15 +241,11 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                   right: 0,
                   bottom: 0,
                   zIndex: 9999,
-                }}
-                onClick={() => {
-                  setShowPopover(false);
-                  setSearchQuery('');
-                  const assignedIds = new Set(currentTags.map(at => at.tag.id));
-                  setSelectedTagIds(assignedIds);
+                  pointerEvents: 'none',
                 }}
               />
               <div
+                ref={popoverRef}
                 style={{
                   position: 'fixed',
                   top: `${popoverPosition.top}px`,
@@ -239,6 +260,7 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                   maxHeight: '400px',
                   display: 'flex',
                   flexDirection: 'column',
+                  pointerEvents: 'auto',
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
@@ -489,15 +511,11 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                     right: 0,
                     bottom: 0,
                     zIndex: 9999,
-                  }}
-                  onClick={() => {
-                    setShowPopover(false);
-                    setSearchQuery('');
-                    const assignedIds = new Set(currentTags.map(at => at.tag.id));
-                    setSelectedTagIds(assignedIds);
+                    pointerEvents: 'none',
                   }}
                 />
                 <div
+                  ref={popoverRef}
                   style={{
                     position: 'fixed',
                     top: `${popoverPosition.top}px`,
@@ -512,6 +530,7 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                     maxHeight: '400px',
                     display: 'flex',
                     flexDirection: 'column',
+                    pointerEvents: 'auto',
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >

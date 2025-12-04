@@ -16,6 +16,7 @@ interface StatusDropdownProps {
 export default function StatusDropdown({ article, isOpen, onToggle, onChange, isUpdating = false, theme = 'light' }: StatusDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLSpanElement>(null);
+  const dropdownContentRef = useRef<HTMLDivElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const currentTheme = themeStyles[theme];
 
@@ -31,6 +32,27 @@ export default function StatusDropdown({ article, isOpen, onToggle, onChange, is
       setDropdownPosition(null);
     }
   }, [isOpen]);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownContentRef.current &&
+        !dropdownContentRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        onToggle();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onToggle]);
 
   return (
     <div ref={dropdownRef} style={{ position: 'relative' }}>
@@ -70,10 +92,11 @@ export default function StatusDropdown({ article, isOpen, onToggle, onChange, is
               right: 0,
               bottom: 0,
               zIndex: 9999,
+              pointerEvents: 'none',
             }}
-            onClick={onToggle}
           />
           <div
+            ref={dropdownContentRef}
             style={{
               position: 'fixed',
               top: `${dropdownPosition.top}px`,
@@ -85,6 +108,7 @@ export default function StatusDropdown({ article, isOpen, onToggle, onChange, is
               zIndex: 10000,
               minWidth: '120px',
               overflow: 'hidden',
+              pointerEvents: 'auto',
             }}
             onClick={(e) => e.stopPropagation()}
           >

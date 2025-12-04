@@ -18,8 +18,8 @@ export default function ReaderWidget() {
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
-  const [fontSize, setFontSize] = useState(16);
-  const [lineHeight, setLineHeight] = useState(1.6);
+  const [fontSize, setFontSize] = useState(24);
+  const [lineHeight, setLineHeight] = useState(1.5);
   const [theme, setTheme] = useState<'light' | 'dark' | 'sepia'>('light');
   const contentRef = useRef<HTMLDivElement | null>(null) as MutableRefObject<HTMLDivElement | null>;
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
@@ -140,7 +140,9 @@ export default function ReaderWidget() {
     if (!id) return;
     try {
       const response = await highlightsApi.list({ articleId: id });
-      setHighlights(response.data || []);
+      // Ensure we create a new array reference to trigger React re-render
+      const newHighlights = response.data || [];
+      setHighlights([...newHighlights]);
     } catch (error) {
       console.error('Error loading highlights:', error);
     }
@@ -156,7 +158,7 @@ export default function ReaderWidget() {
         position: position,
       });
       setMessage({ text: 'Highlight criado!', type: 'success' });
-      loadHighlights();
+      await loadHighlights();
     } catch (error) {
       console.error('Error creating highlight:', error);
       setMessage({ text: 'Erro ao criar highlight', type: 'error' });
@@ -168,7 +170,7 @@ export default function ReaderWidget() {
     if (!article) return;
 
     try {
-      // Create highlight first
+      // Create highlight first (without loading highlights to avoid processing DOM too early)
       const highlightResponse = await highlightsApi.create({
         articleId: article.id,
         text: text,
@@ -179,7 +181,10 @@ export default function ReaderWidget() {
       await highlightsApi.createNote(highlightResponse.data.id, noteContent);
       
       setMessage({ text: 'Highlight com nota criado!', type: 'success' });
-      loadHighlights();
+      
+      // Reload highlights to get the updated highlight with note included
+      // This ensures the highlight is loaded with its note from the start
+      await loadHighlights();
     } catch (error) {
       console.error('Error creating highlight with note:', error);
       setMessage({ text: 'Erro ao criar highlight com nota', type: 'error' });
@@ -299,31 +304,7 @@ export default function ReaderWidget() {
         />
       </div>
 
-      {/* Separator */}
-      {isTopBarVisible && (
-      <div style={{ 
-        borderTop: `2px solid ${currentTheme.separator}`, 
-        marginTop: '1rem', 
-        marginBottom: '1rem',
-        position: 'relative'
-      }}>
-        <div style={{
-          position: 'absolute',
-          top: '-0.75rem',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          backgroundColor: currentTheme.bg,
-          padding: '0 0.5rem',
-          fontSize: '0.75rem',
-          color: currentTheme.secondaryText,
-          fontWeight: 500
-        }}>
-          Conteúdo
-        </div>
-      </div>
-      )}
-
-      {/* Article Content - Only content at the bottom */}
+      {/* Article Content */}
       <div style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
         <ArticleContent
           article={article}

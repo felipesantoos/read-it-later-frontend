@@ -263,16 +263,39 @@ export function restoreSelectionFromPosition(
 
 /**
  * Get coordinates for positioning toolbar near selection
+ * Returns position relative to the positioned parent (absolute positioning context)
  */
-export function getToolbarPosition(range: Range): { top: number; left: number } | null {
+export function getToolbarPosition(range: Range, container?: HTMLElement | null): { top: number; left: number } | null {
   try {
     const rect = range.getBoundingClientRect();
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+    
+    // Use provided container, or find the nearest positioned ancestor
+    let positionedParent: Element | null = container || null;
+    
+    if (!positionedParent) {
+      positionedParent = range.commonAncestorContainer.nodeType === Node.TEXT_NODE
+        ? range.commonAncestorContainer.parentElement
+        : range.commonAncestorContainer as Element;
+      
+      while (positionedParent && positionedParent !== document.body) {
+        const style = window.getComputedStyle(positionedParent);
+        if (style.position !== 'static') {
+          break;
+        }
+        positionedParent = positionedParent.parentElement;
+      }
+    }
+    
+    const parentRect = positionedParent?.getBoundingClientRect() || { top: 0, left: 0 };
+    
+    // Calculate position relative to the positioned parent
+    // Position at top right of selection by default
+    const relativeTop = rect.top - parentRect.top - 8; // 8px above selection
+    const relativeLeft = rect.right - parentRect.left + 8; // Right edge of selection + 8px offset
     
     return {
-      top: rect.bottom + scrollTop + 8, // 8px below selection
-      left: rect.left + scrollLeft + (rect.width / 2), // Center of selection
+      top: relativeTop,
+      left: relativeLeft,
     };
   } catch (e) {
     console.error('Error getting toolbar position:', e);

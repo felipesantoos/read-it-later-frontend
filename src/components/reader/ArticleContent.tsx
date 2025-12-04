@@ -1,4 +1,4 @@
-import { MutableRefObject, useEffect, useRef } from 'react';
+import { MutableRefObject, useEffect, useMemo } from 'react';
 import type { Article } from '../../api/articles';
 import type { Highlight } from '../../api/highlights';
 import { themeStyles } from '../../utils/themeStyles';
@@ -68,65 +68,315 @@ export default function ArticleContent({ article, contentRef, theme, fontSize, l
   const isContentHtml = article.content ? isHtml(article.content) : false;
 
   // Process content to highlight text
-  const processContentWithHighlights = (content: string, isHtmlContent: boolean): string => {
-    if (!content || highlights.length === 0) {
+  const processContentWithHighlights = (content: string, isHtmlContent: boolean, highlightsToProcess: Highlight[]): string => {
+    if (!content || highlightsToProcess.length === 0) {
       return content;
     }
 
     // Sort highlights by text length (longest first) to avoid partial matches
-    const sortedHighlights = [...highlights].sort((a, b) => b.text.length - a.text.length);
+    const sortedHighlights = [...highlightsToProcess].sort((a, b) => b.text.length - a.text.length);
 
     if (isHtmlContent) {
-      // For HTML content, use a simpler approach with string replacement
-      // Escape HTML in highlight text to avoid breaking the structure
-      let processedContent = content;
-      sortedHighlights.forEach((highlight) => {
-        const text = highlight.text.trim();
-        if (!text) return;
+      // For HTML content, use DOM manipulation to avoid breaking HTML structure
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = content;
 
-        // Escape special regex characters
-        const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(escapedText, 'gi');
-        
+      // Process each highlight one by one, highlighting ALL occurrences of each
+      for (const highlight of sortedHighlights) {
+        const text = highlight.text.trim();
+        if (!text) continue;
+
         const hasNotes = highlight.notes && highlight.notes.length > 0;
         const highlightColor = theme === 'dark' ? '#664d00' : theme === 'sepia' ? '#f0e68c' : '#fff3cd';
         const borderStyle = hasNotes ? `border-bottom: 2px solid ${theme === 'dark' ? '#ffc107' : '#ff9800'};` : '';
-        
-        // Replace with highlighted version (only first occurrence)
-        processedContent = processedContent.replace(regex, (match) => {
-          return `<mark data-highlight-id="${highlight.id}" data-has-notes="${hasNotes}" style="background-color: ${highlightColor}; padding: 0.1em 0; border-radius: 2px; cursor: pointer; ${borderStyle}">${match}</mark>`;
-        });
-      });
 
-      return processedContent;
+        // Find all text nodes (re-collect each time to account for DOM changes)
+        const walker = document.createTreeWalker(
+          tempDiv,
+          NodeFilter.SHOW_TEXT,
+          null
+        );
+
+        const textNodes: Text[] = [];
+        let node: Node | null;
+        while ((node = walker.nextNode())) {
+          // Skip if already inside a mark element
+          let parent = node.parentElement;
+          let isInsideMark = false;
+          while (parent && parent !== tempDiv) {
+            if (parent.tagName === 'MARK' || parent.getAttribute('data-highlight-id')) {
+              isInsideMark = true;
+              break;
+            }
+            parent = parent.parentElement;
+          }
+          if (!isInsideMark) {
+            textNodes.push(node as Text);
+          }
+        }
+
+        // Search for text across multiple text nodes (handles text split by HTML tags like links)
+        let found = false;
+        for (let i = 0; i < textNodes.length && !found; i++) {
+            // Try to find text starting from this node, potentially spanning multiple nodes
+            let accumulatedText = '';
+            let startNodeIndex = i;
+            let startOffset = -1;
+            let endNodeIndex = -1;
+            let endOffset = -1;
+
+          // Build accumulated text from current node and following nodes
+          for (let j = i; j < textNodes.length && !found; j++) {
+            const currentNode = textNodes[j];
+            const currentText = currentNode.textContent || '';
+            accumulatedText += currentText;
+
+            // Try exact match
+            let searchIndex = accumulatedText.indexOf(text);
+            
+            // If not found, try case-insensitive
+            if (searchIndex === -1) {
+              const lowerText = text.toLowerCase();
+              const lowerAccumulated = accumulatedText.toLowerCase();
+              searchIndex = lowerAccumulated.indexOf(lowerText);
+            }
+
+            // If still not found, try normalized whitespace
+            if (searchIndex === -1) {
+              const normalizedText = text.replace(/\s+/g, ' ').trim();
+              const normalizedAccumulated = accumulatedText.replace(/\s+/g, ' ');
+              const normalizedIndex = normalizedAccumulated.indexOf(normalizedText);
+              if (normalizedIndex !== -1) {
+                // Map back to original position
+                let actualPos = 0;
+                let normalizedPos = 0;
+                while (normalizedPos < normalizedIndex && actualPos < accumulatedText.length) {
+                  if (/\s/.test(accumulatedText[actualPos])) {
+                    while (actualPos < accumulatedText.length && /\s/.test(accumulatedText[actualPos])) {
+                      actualPos++;
+                    }
+                    normalizedPos++;
+                  } else {
+                    actualPos++;
+                    normalizedPos++;
+                  }
+                }
+                searchIndex = actualPos;
+              }
+            }
+
+            if (searchIndex !== -1) {
+              // Found the text! Now determine which nodes it spans
+              const endPos = searchIndex + text.length;
+              
+              // Find start node and offset
+              let charCount = 0;
+              for (let k = startNodeIndex; k <= j; k++) {
+                const nodeText = textNodes[k].textContent || '';
+                if (charCount + nodeText.length > searchIndex) {
+                  startNodeIndex = k;
+                  startOffset = searchIndex - charCount;
+                  break;
+                }
+                charCount += nodeText.length;
+              }
+
+              // Find end node and offset
+              charCount = 0;
+              for (let k = startNodeIndex; k <= j; k++) {
+                const nodeText = textNodes[k].textContent || '';
+                if (charCount + nodeText.length >= endPos) {
+                  endNodeIndex = k;
+                  endOffset = endPos - charCount;
+                  break;
+                }
+                charCount += nodeText.length;
+              }
+
+              // Get first node and parent for insertion
+              const firstNode = textNodes[startNodeIndex];
+
+              // Now wrap the text with mark element
+              const mark = document.createElement('mark');
+              mark.setAttribute('data-highlight-id', highlight.id);
+              mark.setAttribute('data-has-notes', hasNotes ? 'true' : 'false');
+              mark.style.backgroundColor = highlightColor;
+              mark.style.padding = '0.1em 0';
+              mark.style.borderRadius = '2px';
+              mark.style.cursor = 'pointer';
+              if (borderStyle) {
+                mark.style.borderBottom = borderStyle;
+              }
+
+              const firstParent = firstNode.parentElement;
+              
+              // Build mark content first (in correct order)
+              const markTextNodes: Text[] = [];
+              for (let k = startNodeIndex; k <= endNodeIndex; k++) {
+                const node = textNodes[k];
+                const nodeText = node.textContent || '';
+                
+                if (k === startNodeIndex && k === endNodeIndex) {
+                  const highlightText = nodeText.substring(startOffset, endOffset);
+                  if (highlightText) {
+                    markTextNodes.push(document.createTextNode(highlightText));
+                  }
+                } else if (k === startNodeIndex) {
+                  const highlightText = nodeText.substring(startOffset);
+                  if (highlightText) {
+                    markTextNodes.push(document.createTextNode(highlightText));
+                  }
+                } else if (k === endNodeIndex) {
+                  const highlightText = nodeText.substring(0, endOffset);
+                  if (highlightText) {
+                    markTextNodes.push(document.createTextNode(highlightText));
+                  }
+                } else {
+                  if (nodeText) {
+                    markTextNodes.push(document.createTextNode(nodeText));
+                  }
+                }
+              }
+              
+              // Add all text nodes to mark
+              markTextNodes.forEach(tn => mark.appendChild(tn));
+              
+              // Process nodes in reverse order (end to start) to safely remove and insert
+              for (let k = endNodeIndex; k >= startNodeIndex; k--) {
+                const node = textNodes[k];
+                const nodeText = node.textContent || '';
+                
+                if (k === startNodeIndex && k === endNodeIndex) {
+                  // Single node case
+                  const beforeText = nodeText.substring(0, startOffset);
+                  const afterText = nodeText.substring(endOffset);
+
+                  if (afterText) {
+                    firstParent?.insertBefore(document.createTextNode(afterText), node.nextSibling);
+                  }
+
+                  if (beforeText) {
+                    firstParent?.insertBefore(document.createTextNode(beforeText), node);
+                  }
+
+                  firstParent?.insertBefore(mark, node);
+                  node.remove();
+                } else if (k === endNodeIndex) {
+                  // Last node - add after text
+                  const afterText = nodeText.substring(endOffset);
+                  if (afterText) {
+                    firstParent?.insertBefore(document.createTextNode(afterText), node.nextSibling);
+                  }
+                  node.remove();
+                } else if (k === startNodeIndex) {
+                  // First node - add before text and insert mark
+                  const beforeText = nodeText.substring(0, startOffset);
+                  if (beforeText) {
+                    firstParent?.insertBefore(document.createTextNode(beforeText), node);
+                  }
+                  firstParent?.insertBefore(mark, node);
+                  node.remove();
+                } else {
+                  // Middle node - just remove
+                  node.remove();
+                }
+              }
+
+              found = true;
+              // Only highlight first occurrence to avoid infinite loops
+              break;
+            }
+
+            // Stop if accumulated text is too long (performance optimization)
+            if (accumulatedText.length > text.length * 10) {
+              break;
+            }
+          }
+        }
+      }
+
+      return tempDiv.innerHTML;
     } else {
-      // For plain text, simple replacement
-      let processedContent = content;
+      // For plain text, use DOM manipulation for consistency
+      const tempDiv = document.createElement('div');
+      tempDiv.textContent = content;
+
       sortedHighlights.forEach((highlight) => {
         const text = highlight.text.trim();
         if (!text) return;
 
-        // Escape special regex characters
-        const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(escapedText, 'g');
-
         const hasNotes = highlight.notes && highlight.notes.length > 0;
         const highlightColor = theme === 'dark' ? '#664d00' : theme === 'sepia' ? '#f0e68c' : '#fff3cd';
         const borderStyle = hasNotes ? `border-bottom: 2px solid ${theme === 'dark' ? '#ffc107' : '#ff9800'};` : '';
-        
-        processedContent = processedContent.replace(regex, (match) => {
-          return `<mark data-highlight-id="${highlight.id}" data-has-notes="${hasNotes}" style="background-color: ${highlightColor}; padding: 0.1em 0; border-radius: 2px; cursor: pointer; ${borderStyle}">${match}</mark>`;
-        });
+
+        // Find text node and highlight ALL occurrences
+        const textNode = tempDiv.firstChild;
+        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+          const nodeText = textNode.textContent || '';
+          let remainingText = nodeText;
+          const fragments: Node[] = [];
+
+          // Find all occurrences
+          while (true) {
+            const index = remainingText.indexOf(text);
+            if (index === -1) break;
+
+            // Add text before this occurrence
+            if (index > 0) {
+              fragments.push(document.createTextNode(remainingText.substring(0, index)));
+            }
+
+            // Create highlight mark for this occurrence
+            const highlightSpan = document.createElement('mark');
+            highlightSpan.setAttribute('data-highlight-id', highlight.id);
+            highlightSpan.setAttribute('data-has-notes', hasNotes ? 'true' : 'false');
+            highlightSpan.textContent = text;
+            highlightSpan.style.backgroundColor = highlightColor;
+            highlightSpan.style.padding = '0.1em 0';
+            highlightSpan.style.borderRadius = '2px';
+            highlightSpan.style.cursor = 'pointer';
+            if (borderStyle) {
+              highlightSpan.style.borderBottom = borderStyle;
+            }
+            fragments.push(highlightSpan);
+
+            // Continue searching after this occurrence
+            remainingText = remainingText.substring(index + text.length);
+          }
+
+          // Add remaining text after last occurrence
+          if (remainingText) {
+            fragments.push(document.createTextNode(remainingText));
+          }
+
+          // Replace the original text node with all fragments
+          const parent = textNode.parentNode;
+          if (parent && fragments.length > 0) {
+            fragments.forEach(fragment => parent.insertBefore(fragment, textNode));
+            textNode.remove();
+          }
+        }
       });
 
-      return processedContent;
+      return tempDiv.innerHTML;
     }
   };
 
-  // Get processed content
-  const processedContent = article.content 
-    ? processContentWithHighlights(article.content, isContentHtml)
-    : null;
+  // Get processed content - recalculate when highlights or content changes
+  // Use a key that changes when highlights change to force recalculation
+  const highlightsKey = useMemo(() => {
+    return highlights.length > 0 
+      ? highlights.map(h => `${h.id}-${h.text.substring(0, 20)}-${(h.notes?.length || 0)}-${h.updatedAt || h.createdAt}`).join('|')
+      : 'no-highlights';
+  }, [highlights]);
+  
+  const processedContent = useMemo(() => {
+    if (!article.content) return null;
+    // Always process from original content to avoid double-processing
+    // Force recalculation when highlights change
+    const result = processContentWithHighlights(article.content, isContentHtml, highlights);
+    return result;
+  }, [article.content, highlightsKey, theme, isContentHtml, highlights]);
 
   return (
     <div
@@ -172,6 +422,7 @@ export default function ArticleContent({ article, contentRef, theme, fontSize, l
       {processedContent ? (
         isContentHtml ? (
           <div
+            key={highlightsKey}
             dangerouslySetInnerHTML={{ 
               __html: processedContent
             }}
@@ -181,6 +432,7 @@ export default function ArticleContent({ article, contentRef, theme, fontSize, l
           />
         ) : (
           <div 
+            key={highlightsKey}
             style={{ whiteSpace: 'pre-wrap' }}
             dangerouslySetInnerHTML={{ 
               __html: processedContent

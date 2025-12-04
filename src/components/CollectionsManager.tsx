@@ -23,6 +23,7 @@ export default function CollectionsManager({ articleId, currentCollections = [],
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<Set<string>>(new Set());
   const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadCollections();
@@ -54,6 +55,30 @@ export default function CollectionsManager({ articleId, currentCollections = [],
     } else {
       setPopoverPosition(null);
     }
+  }, [showPopover, currentCollections]);
+
+  // Handle click outside to close popover
+  useEffect(() => {
+    if (!showPopover) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        setShowPopover(false);
+        setSearchQuery('');
+        const assignedIds = new Set(currentCollections.map(ac => ac.collection.id));
+        setSelectedCollectionIds(assignedIds);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, [showPopover, currentCollections]);
 
 
@@ -220,15 +245,11 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                   right: 0,
                   bottom: 0,
                   zIndex: 9999,
-                }}
-                onClick={() => {
-                  setShowPopover(false);
-                  setSearchQuery('');
-                  const assignedIds = new Set(currentCollections.map(ac => ac.collection.id));
-                  setSelectedCollectionIds(assignedIds);
+                  pointerEvents: 'none',
                 }}
               />
               <div
+                ref={popoverRef}
                 style={{
                   position: 'fixed',
                   top: `${popoverPosition.top}px`,
@@ -243,6 +264,7 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                   maxHeight: '400px',
                   display: 'flex',
                   flexDirection: 'column',
+                  pointerEvents: 'auto',
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
@@ -494,15 +516,11 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                     right: 0,
                     bottom: 0,
                     zIndex: 9999,
-                  }}
-                  onClick={() => {
-                    setShowPopover(false);
-                    setSearchQuery('');
-                    const assignedIds = new Set(currentCollections.map(ac => ac.collection.id));
-                    setSelectedCollectionIds(assignedIds);
+                    pointerEvents: 'none',
                   }}
                 />
                 <div
+                  ref={popoverRef}
                   style={{
                     position: 'fixed',
                     top: `${popoverPosition.top}px`,
@@ -517,6 +535,7 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                     maxHeight: '400px',
                     display: 'flex',
                     flexDirection: 'column',
+                    pointerEvents: 'auto',
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >
