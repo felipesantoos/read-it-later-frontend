@@ -4,7 +4,6 @@ import { articlesApi, type Article } from '../api/articles';
 import { highlightsApi, type Highlight } from '../api/highlights';
 import Toast from '../components/Toast';
 import ReaderHeader from '../components/reader/ReaderHeader';
-import ReadingControls from '../components/reader/ReadingControls';
 import PageTracker from '../components/reader/PageTracker';
 import ArticleContent from '../components/reader/ArticleContent';
 import { ArticleTagsAndCollections, ArticleHighlights } from '../components/reader/ArticleMetadata';
@@ -244,6 +243,16 @@ export default function ReaderWidget() {
           onThemeChange={setTheme}
           isTopBarVisible={isTopBarVisible}
           onToggleTopBar={() => setIsTopBarVisible(!isTopBarVisible)}
+          fontSize={fontSize}
+          lineHeight={lineHeight}
+          onFontSizeChange={setFontSize}
+          onLineHeightChange={setLineHeight}
+          onStatusChange={handleStatusChange}
+          isUpdatingStatus={isUpdatingStatus}
+          isStatusDropdownOpen={isStatusDropdownOpen}
+          onStatusDropdownToggle={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+          selectedText={selectedText}
+          onCreateHighlight={handleCreateHighlight}
         />
       </div>
 
@@ -266,7 +275,7 @@ export default function ReaderWidget() {
       {/* All Actions and Controls - Horizontal Layout */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: 'minmax(0, auto) minmax(0, auto) minmax(0, auto) 1fr',
+        gridTemplateColumns: 'minmax(0, auto) minmax(0, auto) 1fr',
         gap: '0.5rem',
         marginBottom: '0.75rem',
         alignItems: 'stretch',
@@ -274,39 +283,7 @@ export default function ReaderWidget() {
         boxSizing: 'border-box',
         overflow: 'hidden'
       }} className="reader-actions-grid">
-        {/* Column 1: Reading Controls */}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div 
-            className="card" 
-            style={{ 
-              flex: 1, 
-              display: 'flex', 
-              flexDirection: 'column', 
-              padding: '0.4rem', 
-              height: '100%', 
-              minWidth: 0,
-              backgroundColor: currentTheme.cardBg,
-              borderColor: currentTheme.cardBorder
-            }}
-          >
-            <ReadingControls
-              article={article}
-              fontSize={fontSize}
-              lineHeight={lineHeight}
-              onFontSizeChange={setFontSize}
-              onLineHeightChange={setLineHeight}
-              onStatusChange={handleStatusChange}
-              isUpdatingStatus={isUpdatingStatus}
-              isStatusDropdownOpen={isStatusDropdownOpen}
-              onStatusDropdownToggle={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
-              selectedText={selectedText}
-              onCreateHighlight={handleCreateHighlight}
-              theme={theme}
-            />
-          </div>
-        </div>
-
-        {/* Column 2: Progress and Page Tracking */}
+        {/* Column 1: Progress and Page Tracking */}
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div 
             className="card" 
@@ -358,7 +335,7 @@ export default function ReaderWidget() {
           </div>
         </div>
 
-        {/* Column 3: Tags and Collections */}
+        {/* Column 2: Tags and Collections */}
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ flex: 1, height: '100%', minWidth: 0 }}>
             <ArticleTagsAndCollections
@@ -370,7 +347,7 @@ export default function ReaderWidget() {
           </div>
         </div>
 
-        {/* Column 4: Highlights Section */}
+        {/* Column 3: Highlights Section */}
         <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden', width: '100%' }}>
           {highlights.length > 0 ? (
             <ArticleHighlights highlights={highlights} theme={theme} />
