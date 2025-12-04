@@ -1,9 +1,11 @@
 .widget-container {
+  width: 100%;
   max-width: 100%;
   padding: 1rem;
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
 }
 
 .widget-title {
@@ -55,6 +57,15 @@
   gap: 0.5rem;
 }
 
+.reader-actions-grid {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, auto) minmax(0, auto) 1fr;
+  gap: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
 @media (max-width: 768px) {
   .actions-grid {
     grid-template-columns: 1fr;
@@ -62,6 +73,14 @@
   
   .actions-grid-3 {
     grid-template-columns: 1fr;
+  }
+
+  .reader-actions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reader-actions-grid > div {
+    max-width: 100% !important;
   }
 }
 

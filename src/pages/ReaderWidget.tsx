@@ -223,7 +223,7 @@ export default function ReaderWidget() {
       )}
 
       {/* Fixed Actions Bar at the top */}
-      <div style={{ flexShrink: 0 }}>
+      <div style={{ flexShrink: 0, width: '100%' }}>
         {/* Header */}
         <ReaderHeader
           article={article}
@@ -244,10 +244,19 @@ export default function ReaderWidget() {
       </div>
 
       {/* All Actions and Controls - Horizontal Layout */}
-      <div className="actions-grid-3" style={{ marginBottom: '0.75rem', alignItems: 'stretch' }}>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'minmax(0, auto) minmax(0, auto) minmax(0, auto) 1fr',
+        gap: '0.5rem',
+        marginBottom: '0.75rem',
+        alignItems: 'stretch',
+        width: '100%',
+        boxSizing: 'border-box',
+        overflow: 'hidden'
+      }} className="reader-actions-grid">
         {/* Column 1: Reading Controls */}
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0.4rem', height: '100%' }}>
+          <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0.4rem', height: '100%', minWidth: 0 }}>
             <ReadingControls
               article={article}
               fontSize={fontSize}
@@ -266,7 +275,7 @@ export default function ReaderWidget() {
 
         {/* Column 2: Progress and Page Tracking */}
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0.5rem', height: '100%' }}>
+          <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0.5rem', height: '100%', minWidth: 0 }}>
             {(article.readingProgress > 0 || article.totalPages) && (
               <div style={{ 
                 height: '4px', 
@@ -305,7 +314,7 @@ export default function ReaderWidget() {
 
         {/* Column 3: Tags and Collections */}
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ flex: 1, height: '100%' }}>
+          <div style={{ flex: 1, height: '100%', minWidth: 0 }}>
             <ArticleTagsAndCollections
               article={article}
               onTagsUpdate={updateArticleTagsAndCollections}
@@ -314,8 +323,8 @@ export default function ReaderWidget() {
           </div>
         </div>
 
-        {/* Row 2: Highlights Section - spans all columns */}
-        <div style={{ gridColumn: '1 / -1' }}>
+        {/* Column 4: Highlights Section */}
+        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
           <ArticleHighlights highlights={highlights} />
         </div>
       </div>
