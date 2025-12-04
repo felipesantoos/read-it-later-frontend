@@ -46,24 +46,43 @@ export default function ReaderWidget() {
       // Update reading progress (throttle to avoid too many requests)
       const updateProgress = async () => {
         try {
+          let updatedArticle: Article | null = null;
+          
           // If article has totalPages, update by page instead
           if (article.totalPages && article.totalPages > 0) {
             const newCurrentPage = Math.round(progress * article.totalPages);
             if (newCurrentPage !== article.currentPage) {
-              await articlesApi.updateReadingProgressByPage(article.id, newCurrentPage);
+              const response = await articlesApi.updateReadingProgressByPage(article.id, newCurrentPage);
+              updatedArticle = response.data;
             }
           } else {
-            await articlesApi.updateReadingProgress(article.id, progress);
+            const response = await articlesApi.updateReadingProgress(article.id, progress);
+            updatedArticle = response.data;
           }
           
+          // Update status if needed
+          let newStatus: Article['status'] | undefined;
           if (progress > 0 && article.status === 'UNREAD') {
-            await articlesApi.update(article.id, { status: 'READING' });
+            newStatus = 'READING';
+          } else if (progress >= 0.95) {
+            newStatus = 'FINISHED';
           }
-          if (progress >= 0.95) {
-            await articlesApi.update(article.id, { status: 'FINISHED' });
+          
+          if (newStatus && newStatus !== article.status) {
+            const response = await articlesApi.update(article.id, { status: newStatus });
+            updatedArticle = response.data;
+          }
+          
+          // Update local state if we got an updated article
+          if (updatedArticle) {
+            updateArticleState(updatedArticle);
+          } else if (newStatus) {
+            // Just update status if no full article response
+            updateArticleState({ status: newStatus });
           }
         } catch (error) {
           console.error('Error updating progress:', error);
+          // Não mostrar toast para atualizações automáticas de scroll
         }
       };
 
@@ -137,6 +156,35 @@ export default function ReaderWidget() {
     }
   }
 
+  // Função para atualizar estado local sem recarregar o artigo inteiro
+  function updateArticleState(updates: Partial<Article>) {
+    if (!article) return;
+    setArticle({ ...article, ...updates });
+    // Atualizar valores de edição se necessário
+    if (updates.totalPages !== undefined) {
+      setEditingTotalPages(updates.totalPages?.toString() || '');
+    }
+    if (updates.currentPage !== undefined) {
+      setEditingCurrentPage(updates.currentPage?.toString() || '');
+    }
+  }
+
+  // Função para atualizar apenas tags e coleções sem recarregar o artigo inteiro
+  async function updateArticleTagsAndCollections() {
+    if (!id || !article) return;
+    try {
+      const response = await articlesApi.get(id);
+      // Atualizar apenas tags e coleções no estado local
+      updateArticleState({
+        articleTags: response.data.articleTags,
+        articleCollections: response.data.articleCollections,
+      });
+    } catch (error) {
+      console.error('Error updating tags/collections:', error);
+      // Não mostrar toast aqui, pois TagsManager/CollectionsManager já mostram seus próprios toasts
+    }
+  }
+
   async function handleSavePages() {
     if (!article) return;
     
@@ -158,11 +206,12 @@ export default function ReaderWidget() {
     }
     
     try {
-      await articlesApi.update(article.id, {
+      const response = await articlesApi.update(article.id, {
         totalPages: totalPages,
         currentPage: currentPage,
       });
-      await loadArticle();
+      // Atualizar estado local com a resposta do servidor
+      updateArticleState(response.data);
       setIsEditingPages(false);
       setMessage({ text: 'Páginas atualizadas!', type: 'success' });
     } catch (error) {
@@ -185,8 +234,10 @@ export default function ReaderWidget() {
     }
     
     try {
-      await articlesApi.updateReadingProgressByPage(article.id, newPage);
-      await loadArticle();
+      const response = await articlesApi.updateReadingProgressByPage(article.id, newPage);
+      // Atualizar estado local com a resposta do servidor
+      updateArticleState(response.data);
+      setMessage({ text: 'Página atualizada!', type: 'success' });
     } catch (error) {
       console.error('Error updating page:', error);
       setMessage({ text: 'Erro ao atualizar página', type: 'error' });
@@ -241,8 +292,9 @@ export default function ReaderWidget() {
     setIsStatusDropdownOpen(false);
     setIsUpdatingStatus(true);
     try {
-      await articlesApi.update(article.id, { status: newStatus });
-      await loadArticle();
+      const response = await articlesApi.update(article.id, { status: newStatus });
+      // Atualizar estado local com a resposta do servidor
+      updateArticleState(response.data);
       setMessage({ text: 'Status atualizado!', type: 'success' });
     } catch (error) {
       console.error('Error updating status:', error);
@@ -678,12 +730,12 @@ export default function ReaderWidget() {
         <TagsManager
           articleId={article.id}
           currentTags={article.articleTags}
-          onUpdate={loadArticle}
+          onUpdate={updateArticleTagsAndCollections}
         />
         <CollectionsManager
           articleId={article.id}
           currentCollections={article.articleCollections}
-          onUpdate={loadArticle}
+          onUpdate={updateArticleTagsAndCollections}
         />
       </div>
 
