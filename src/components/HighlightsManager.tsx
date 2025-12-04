@@ -98,7 +98,7 @@ export default function HighlightsManager({
     if (!highlight.position || !contentRef?.current) return;
 
     try {
-      const success = restoreSelectionFromPosition(highlight.position, contentRef.current);
+      const success = restoreSelectionFromPosition(highlight.position, contentRef.current, highlight.id);
       if (success) {
         // Scroll to selection
         const selection = window.getSelection();

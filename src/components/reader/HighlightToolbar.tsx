@@ -8,7 +8,7 @@ interface HighlightToolbarProps {
   onHighlight: (text: string, position: string) => Promise<void>;
   onHighlightWithNote: (text: string, position: string, noteContent: string) => Promise<void>;
   theme: Theme;
-  contentRef: React.RefObject<HTMLDivElement>;
+  contentRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export default function HighlightToolbar({
@@ -29,6 +29,9 @@ export default function HighlightToolbar({
 
   useEffect(() => {
     const handleSelection = () => {
+      // Don't hide if note input is showing
+      if (showNoteInput) return;
+      
       const selection = window.getSelection();
       if (!selection || selection.rangeCount === 0 || selection.toString().trim() === '') {
         setIsVisible(false);
@@ -61,11 +64,15 @@ export default function HighlightToolbar({
     };
 
     const handleClick = (e: MouseEvent) => {
-      // Hide toolbar if clicking outside
+      // Hide toolbar if clicking outside (but not if clicking on the toolbar itself)
       if (toolbarRef.current && !toolbarRef.current.contains(e.target as Node)) {
         const selection = window.getSelection();
         if (!selection || selection.toString().trim() === '') {
           setIsVisible(false);
+          setShowNoteInput(false);
+          setNoteContent('');
+        } else if (showNoteInput) {
+          // If note input is showing and clicking outside, just close the input but keep toolbar
           setShowNoteInput(false);
           setNoteContent('');
         }
@@ -79,7 +86,7 @@ export default function HighlightToolbar({
       document.removeEventListener('selectionchange', handleSelection);
       document.removeEventListener('mousedown', handleClick);
     };
-  }, [contentRef]);
+  }, [contentRef, showNoteInput]);
 
   // Adjust position if toolbar would go off screen
   useEffect(() => {

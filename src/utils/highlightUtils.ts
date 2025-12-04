@@ -132,17 +132,53 @@ export function findElementByXPath(xpath: string, root: Node = document): Node |
 }
 
 /**
+ * Normalize text for comparison (remove extra whitespace, trim)
+ */
+function normalizeText(text: string): string {
+  return text.trim().replace(/\s+/g, ' ');
+}
+
+/**
  * Restore selection from position identifier
  */
-export function restoreSelectionFromPosition(position: string, container: HTMLElement): boolean {
+export function restoreSelectionFromPosition(
+  position: string, 
+  container: HTMLElement, 
+  highlightId?: string
+): boolean {
   try {
     const pos = JSON.parse(position);
     const searchText = pos.text;
+    const normalizedSearchText = normalizeText(searchText);
     
-    // First, try to find an existing highlight mark with the text
+    // First, try to find by highlight ID if available (most reliable)
+    if (highlightId) {
+      const markById = container.querySelector(`mark[data-highlight-id="${highlightId}"]`) as HTMLElement;
+      if (markById) {
+        markById.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        const range = document.createRange();
+        if (markById.firstChild && markById.firstChild.nodeType === Node.TEXT_NODE) {
+          range.selectNodeContents(markById);
+        } else {
+          range.selectNode(markById);
+        }
+        
+        const selection = window.getSelection();
+        if (selection) {
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+        
+        return true;
+      }
+    }
+    
+    // Second, try to find an existing highlight mark by matching text
     const allMarks = container.querySelectorAll('mark[data-highlight-id]');
     for (const mark of Array.from(allMarks)) {
-      if (mark.textContent && mark.textContent.trim() === searchText.trim()) {
+      const markText = mark.textContent || '';
+      if (normalizeText(markText) === normalizedSearchText) {
         // Found the highlight, scroll to it and select it
         mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
         
@@ -164,56 +200,58 @@ export function restoreSelectionFromPosition(position: string, container: HTMLEl
       }
     }
     
-    // If not found in marks, try to find in the content using XPath
-    const element = findElementByXPath(pos.xpath, container);
-    
-    if (!element || (element.nodeType !== Node.TEXT_NODE && element.nodeType !== Node.ELEMENT_NODE)) {
-      return false;
-    }
-    
-    // Try to find text node
-    let textNode: Node | null = null;
-    if (element.nodeType === Node.TEXT_NODE) {
-      textNode = element;
-    } else {
-      // Find first text node in element
-      const walker = document.createTreeWalker(
-        element,
-        NodeFilter.SHOW_TEXT,
-        null
-      );
-      textNode = walker.nextNode();
-    }
-    
-    if (!textNode || !textNode.textContent) {
-      return false;
-    }
-    
-    // Try to match text
-    const textContent = textNode.textContent;
-    const index = textContent.indexOf(searchText);
-    
-    if (index === -1) {
-      return false;
-    }
-    
-    // Create range
-    const range = document.createRange();
-    range.setStart(textNode, index);
-    range.setEnd(textNode, index + searchText.length);
-    
-    // Scroll to range
-    range.getBoundingClientRect();
-    if (textNode.parentElement) {
-      textNode.parentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    
-    // Select
-    const selection = window.getSelection();
-    if (selection) {
-      selection.removeAllRanges();
-      selection.addRange(range);
-      return true;
+    // Third, try to find in the content using XPath (fallback)
+    if (pos.xpath) {
+      const element = findElementByXPath(pos.xpath, container);
+      
+      if (element && (element.nodeType === Node.TEXT_NODE || element.nodeType === Node.ELEMENT_NODE)) {
+        // Try to find text node
+        let textNode: Node | null = null;
+        if (element.nodeType === Node.TEXT_NODE) {
+          textNode = element;
+        } else {
+          // Find first text node in element
+          const walker = document.createTreeWalker(
+            element,
+            NodeFilter.SHOW_TEXT,
+            null
+          );
+          textNode = walker.nextNode();
+        }
+        
+        if (textNode && textNode.textContent) {
+          // Try exact match first
+          let index = textNode.textContent.indexOf(searchText);
+          if (index === -1) {
+            // Try normalized match
+            const normalizedTextContent = normalizeText(textNode.textContent);
+            if (normalizedTextContent.includes(normalizedSearchText)) {
+              // Try to find approximate position
+              index = textNode.textContent.toLowerCase().indexOf(searchText.toLowerCase());
+            }
+          }
+          
+          if (index !== -1) {
+            const range = document.createRange();
+            range.setStart(textNode, index);
+            range.setEnd(textNode, index + searchText.length);
+            
+            // Scroll to range
+            range.getBoundingClientRect();
+            if (textNode.parentElement) {
+              textNode.parentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            
+            // Select
+            const selection = window.getSelection();
+            if (selection) {
+              selection.removeAllRanges();
+              selection.addRange(range);
+              return true;
+            }
+          }
+        }
+      }
     }
     
     return false;
