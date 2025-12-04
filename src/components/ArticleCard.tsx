@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { articlesApi, type Article } from '../api/articles';
 import '../App.css';
@@ -11,6 +11,8 @@ interface ArticleCardProps {
 export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
   const navigate = useNavigate();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
 
   const handleStatusChange = async (newStatus: Article['status']) => {
     if (isUpdating) return;
@@ -65,6 +67,37 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
     ARCHIVED: '#6c757d',
   };
 
+  const statusLabels: Record<Article['status'], string> = {
+    UNREAD: 'Não Lido',
+    READING: 'Lendo',
+    FINISHED: 'Lido',
+    ARCHIVED: 'Arquivado',
+  };
+
+  const allStatuses: Article['status'][] = ['UNREAD', 'READING', 'FINISHED', 'ARCHIVED'];
+
+  // Fechar dropdown ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target as Node)) {
+        setIsStatusDropdownOpen(false);
+      }
+    };
+
+    if (isStatusDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isStatusDropdownOpen]);
+
+  const handleStatusSelect = async (newStatus: Article['status']) => {
+    setIsStatusDropdownOpen(false);
+    await handleStatusChange(newStatus);
+  };
+
   return (
     <div 
       className="card" 
@@ -105,17 +138,94 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
               {article.isFavorited && (
                 <span style={{ fontSize: '0.8rem' }} title="Favorito">⭐</span>
               )}
-              <span
-                style={{
-                  fontSize: '0.7rem',
-                  padding: '0.2rem 0.4rem',
-                  borderRadius: '4px',
-                  backgroundColor: statusColors[article.status],
-                  color: 'white',
-                }}
-              >
-                {article.status}
-              </span>
+              <div ref={statusDropdownRef} style={{ position: 'relative' }}>
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsStatusDropdownOpen(!isStatusDropdownOpen);
+                  }}
+                  style={{
+                    fontSize: '0.7rem',
+                    padding: '0.2rem 0.4rem',
+                    borderRadius: '4px',
+                    backgroundColor: statusColors[article.status],
+                    color: 'white',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    display: 'inline-block',
+                    transition: 'opacity 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.opacity = '0.9';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.opacity = '1';
+                  }}
+                >
+                  {statusLabels[article.status]} ▼
+                </span>
+                {isStatusDropdownOpen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      marginTop: '0.25rem',
+                      backgroundColor: 'white',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                      zIndex: 1000,
+                      minWidth: '120px',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {allStatuses.map((status) => (
+                      <div
+                        key={status}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStatusSelect(status);
+                        }}
+                        style={{
+                          padding: '0.5rem 0.75rem',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer',
+                          backgroundColor: status === article.status ? '#f0f0f0' : 'white',
+                          color: status === article.status ? statusColors[status] : '#333',
+                          transition: 'background-color 0.15s',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (status !== article.status) {
+                            (e.currentTarget as HTMLElement).style.backgroundColor = '#f8f9fa';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (status !== article.status) {
+                            (e.currentTarget as HTMLElement).style.backgroundColor = 'white';
+                          }
+                        }}
+                      >
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor: statusColors[status],
+                            marginRight: '0.5rem',
+                            verticalAlign: 'middle',
+                          }}
+                        />
+                        {statusLabels[status]}
+                        {status === article.status && (
+                          <span style={{ marginLeft: '0.5rem', color: statusColors[status] }}>✓</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           {article.description && (
@@ -130,7 +240,16 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
             {article.readingTime && (
               <span style={{ fontSize: '0.75rem', color: '#999' }}>⏱ {formatReadingTime(article.readingTime)}</span>
             )}
-            {article.readingProgress > 0 && (
+            {article.totalPages && article.totalPages > 0 ? (
+              <span style={{ fontSize: '0.75rem', color: '#999' }}>
+                📄 {article.currentPage || 0}/{article.totalPages} páginas
+                {article.currentPage && article.totalPages && (
+                  <span style={{ marginLeft: '0.25rem' }}>
+                    ({Math.round(((article.currentPage || 0) / article.totalPages) * 100)}%)
+                  </span>
+                )}
+              </span>
+            ) : article.readingProgress > 0 && (
               <span style={{ fontSize: '0.75rem', color: '#999' }}>
                 📖 {Math.round(article.readingProgress * 100)}%
               </span>

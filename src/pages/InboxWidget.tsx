@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { articlesApi, type Article } from '../api/articles';
+import { articlesApi, type Article, type ArticleCounts } from '../api/articles';
 import { searchApi } from '../api/search';
 import ArticleCard from '../components/ArticleCard';
 import Toast from '../components/Toast';
@@ -19,6 +19,17 @@ export default function InboxWidget() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [urlInput, setUrlInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [statusCounts, setStatusCounts] = useState<ArticleCounts>({
+    UNREAD: 0,
+    READING: 0,
+    FINISHED: 0,
+    ARCHIVED: 0,
+    total: 0,
+  });
+
+  useEffect(() => {
+    loadStatusCounts();
+  }, []);
 
   useEffect(() => {
     if (searchQuery.trim()) {
@@ -30,6 +41,21 @@ export default function InboxWidget() {
       loadArticles();
     }
   }, [searchQuery, statusFilter, contentTypeFilter, sortOption]);
+
+  async function loadStatusCounts() {
+    try {
+      const response = await articlesApi.getCounts();
+      if (response.data) {
+        setStatusCounts(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading status counts:', error);
+    }
+  }
+
+  async function handleArticleUpdate() {
+    await Promise.all([loadArticles(), loadStatusCounts()]);
+  }
 
   async function loadArticles() {
     setLoading(true);
@@ -121,7 +147,7 @@ export default function InboxWidget() {
       await articlesApi.create({ url: urlInput.trim() });
       setMessage({ text: 'Artigo salvo com sucesso!', type: 'success' });
       setUrlInput('');
-      loadArticles();
+      await handleArticleUpdate();
     } catch (error) {
       console.error('Error saving article:', error);
       setMessage({ text: error instanceof Error ? error.message : 'Erro ao salvar artigo', type: 'error' });
@@ -157,9 +183,9 @@ export default function InboxWidget() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
-  const unreadCount = articles.filter(a => a.status === 'UNREAD').length;
-  const readingCount = articles.filter(a => a.status === 'READING').length;
-  const finishedCount = articles.filter(a => a.status === 'FINISHED').length;
+  const unreadCount = statusCounts.UNREAD;
+  const readingCount = statusCounts.READING;
+  const finishedCount = statusCounts.FINISHED;
   
   // Get current reading session (most recently accessed article with READING status)
   const currentReadingSession = articles
@@ -486,7 +512,7 @@ export default function InboxWidget() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {articles.map((article) => (
-            <ArticleCard key={article.id} article={article} onUpdate={loadArticles} />
+            <ArticleCard key={article.id} article={article} onUpdate={handleArticleUpdate} />
           ))}
         </div>
       )}

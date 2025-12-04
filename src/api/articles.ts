@@ -20,6 +20,8 @@ export interface Article {
   wordCount: number | null;
   lastReadAt: Date | null;
   readCount: number;
+  totalPages: number | null;
+  currentPage: number | null;
   createdAt: string;
   updatedAt: string;
   finishedAt: string | null;
@@ -54,9 +56,19 @@ export interface UpdateArticleData {
   status?: Article['status'];
   isFavorited?: boolean;
   readingProgress?: number;
+  totalPages?: number | null;
+  currentPage?: number | null;
   attributes?: Record<string, any>;
   title?: string;
   description?: string;
+}
+
+export interface ArticleCounts {
+  UNREAD: number;
+  READING: number;
+  FINISHED: number;
+  ARCHIVED: number;
+  total: number;
 }
 
 export const articlesApi = {
@@ -86,5 +98,9 @@ export const articlesApi = {
   delete: (id: string) => api.delete(`/articles/${id}`),
   updateReadingProgress: (id: string, progress: number) =>
     api.post<ApiResponse<Article>>(`/articles/${id}/read`, { progress }),
+  updateReadingProgressByPage: (id: string, currentPage: number) =>
+    api.post<ApiResponse<Article>>(`/articles/${id}/read`, { currentPage }),
+  getCounts: () =>
+    api.get<ApiResponse<ArticleCounts>>('/articles/counts'),
 };
 
