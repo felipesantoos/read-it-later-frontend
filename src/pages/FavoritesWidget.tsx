@@ -17,8 +17,8 @@ export default function FavoritesWidget() {
     setLoading(true);
     try {
       const response = await articlesApi.list({
-        status: 'FAVORITED',
-        limit: 100,
+        isFavorited: true,
+        limit: 200,
       });
       setArticles(response.data || []);
     } catch (error) {

@@ -11,7 +11,8 @@ export interface Article {
   siteName: string | null;
   content: string | null;
   contentType: 'ARTICLE' | 'BLOG' | 'PDF' | 'YOUTUBE' | 'TWITTER' | 'NEWSLETTER' | 'BOOK' | 'EBOOK';
-  status: 'UNREAD' | 'READING' | 'FINISHED' | 'ARCHIVED' | 'FAVORITED';
+  status: 'UNREAD' | 'READING' | 'FINISHED' | 'ARCHIVED';
+  isFavorited: boolean;
   language: string | null;
   attributes: Record<string, any> | null;
   readingProgress: number;
@@ -51,6 +52,7 @@ export interface CreateArticleData {
 
 export interface UpdateArticleData {
   status?: Article['status'];
+  isFavorited?: boolean;
   readingProgress?: number;
   attributes?: Record<string, any>;
   title?: string;
@@ -60,11 +62,13 @@ export interface UpdateArticleData {
 export const articlesApi = {
   list: (params?: {
     status?: string;
+    isFavorited?: boolean;
     page?: number;
     limit?: number;
   }) => {
     const query = new URLSearchParams();
     if (params?.status) query.set('status', params.status);
+    if (params?.isFavorited !== undefined) query.set('isFavorited', params.isFavorited.toString());
     if (params?.page) query.set('page', params.page.toString());
     if (params?.limit) query.set('limit', params.limit.toString());
     

@@ -5,7 +5,7 @@ export interface Analytics {
   totalRead: number;
   totalFinished: number;
   totalArchived: number;
-  totalFavorited: number;
+  totalFavorited: number; // Articles with isFavorited = true
   totalHighlights: number;
   totalCollections: number;
   totalTags: number;

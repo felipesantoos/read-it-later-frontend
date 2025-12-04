@@ -25,6 +25,19 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
     }
   };
 
+  const handleToggleFavorite = async () => {
+    if (isUpdating) return;
+    setIsUpdating(true);
+    try {
+      await articlesApi.update(article.id, { isFavorited: !article.isFavorited });
+      onUpdate?.();
+    } catch (error) {
+      console.error('Error updating article:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!confirm('Tem certeza que deseja deletar este artigo?')) return;
     if (isUpdating) return;
@@ -50,7 +63,6 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
     READING: '#007bff',
     FINISHED: '#28a745',
     ARCHIVED: '#6c757d',
-    FAVORITED: '#ffc107',
   };
 
   return (
@@ -89,18 +101,22 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
             <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
               {article.title || article.url}
             </h3>
-            <span
-              style={{
-                fontSize: '0.7rem',
-                padding: '0.2rem 0.4rem',
-                borderRadius: '4px',
-                backgroundColor: statusColors[article.status],
-                color: 'white',
-                flexShrink: 0,
-              }}
-            >
-              {article.status}
-            </span>
+            <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', flexShrink: 0 }}>
+              {article.isFavorited && (
+                <span style={{ fontSize: '0.8rem' }} title="Favorito">⭐</span>
+              )}
+              <span
+                style={{
+                  fontSize: '0.7rem',
+                  padding: '0.2rem 0.4rem',
+                  borderRadius: '4px',
+                  backgroundColor: statusColors[article.status],
+                  color: 'white',
+                }}
+              >
+                {article.status}
+              </span>
+            </div>
           </div>
           {article.description && (
             <p style={{ fontSize: '0.8rem', color: '#666', margin: '0.25rem 0', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
@@ -143,12 +159,13 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleStatusChange(article.status === 'FAVORITED' ? 'UNREAD' : 'FAVORITED');
+                handleToggleFavorite();
               }}
               disabled={isUpdating}
               style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem' }}
+              title={article.isFavorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
             >
-              {article.status === 'FAVORITED' ? '❤️' : '🤍'}
+              {article.isFavorited ? '❤️' : '🤍'}
             </button>
             <button
               onClick={(e) => {
