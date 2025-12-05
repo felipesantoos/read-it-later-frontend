@@ -29,3 +29,35 @@ code {
     monospace;
 }
 
+/* Token hover styles - subtle grey background on hover */
+/* Hover effect is subtle and won't interfere with browser's selection highlight */
+span[id^="ritl-w-"] {
+  transition: background-color 0.15s ease;
+  border-radius: 2px;
+  padding: 0 1px;
+  position: relative;
+}
+
+/* Hover effect - subtle grey background */
+span[id^="ritl-w-"]:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Dark theme token hover */
+[data-theme="dark"] span[id^="ritl-w-"]:hover,
+.dark span[id^="ritl-w-"]:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Sepia theme token hover */
+[data-theme="sepia"] span[id^="ritl-w-"]:hover,
+.sepia span[id^="ritl-w-"]:hover {
+  background-color: rgba(92, 75, 55, 0.08);
+}
+
+/* Ensure browser's selection highlight is visible */
+/* The browser's default selection (yellow) will show on top of hover */
+span[id^="ritl-w-"]::selection {
+  background-color: rgba(255, 255, 0, 0.3);
+}
+

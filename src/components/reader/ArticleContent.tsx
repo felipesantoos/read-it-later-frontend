@@ -106,414 +106,123 @@ export default function ArticleContent({ article, contentRef, theme, fontSize, l
   // Determine if content is HTML or plain text
   const isContentHtml = article.content ? isHtml(article.content) : false;
 
-  // Helper to escape regex special chars
-  const escapeRegExp = (str: string): string => {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  };
-
-  // Process content to highlight text
+  // Process content to highlight text (only Version 3 token-based highlights)
   const processContentWithHighlights = (content: string, isHtmlContent: boolean, highlightsToProcess: Highlight[]): string => {
     if (!content || highlightsToProcess.length === 0) {
       return content;
     }
 
-    // Separate highlights by version: token-based (v3) vs text-based (v2/legacy)
+    // Filter only Version 3 token-based highlights
     const tokenBasedHighlights: Highlight[] = [];
-    const textBasedHighlights: Highlight[] = [];
-
     for (const highlight of highlightsToProcess) {
       if (highlight.position) {
         try {
           const parsed = JSON.parse(highlight.position);
           if (parsed && parsed.version === 3 && Array.isArray(parsed.tokenIds)) {
             tokenBasedHighlights.push(highlight);
-            continue;
           }
         } catch {
-          // Invalid JSON, treat as text-based
+          // Invalid JSON or not Version 3, skip this highlight
+          console.warn('Skipping highlight with invalid or unsupported position format:', highlight.id);
         }
       }
-      textBasedHighlights.push(highlight);
     }
 
-    // Process token-based highlights first (more precise)
-    let processedContent: string = content;
-    if (isHtmlContent && tokenBasedHighlights.length > 0) {
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = processedContent || '';
+    // Only process if we have token-based highlights and HTML content
+    if (!isHtmlContent || tokenBasedHighlights.length === 0) {
+      return content;
+    }
 
-      for (const highlight of tokenBasedHighlights) {
-        try {
-          if (!highlight.position) continue;
-          const parsed = JSON.parse(highlight.position);
-          if (parsed && parsed.version === 3 && Array.isArray(parsed.tokenIds)) {
-            const tokenIds = parsed.tokenIds as string[];
-            
-            // Find all token spans for this highlight
-            const tokenSpans: HTMLElement[] = [];
-            for (const tokenId of tokenIds) {
-              const span = tempDiv.querySelector(`#${tokenId}`) as HTMLElement;
-              if (span && span.id.startsWith('ritl-w-')) {
-                tokenSpans.push(span);
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = content;
+
+    for (const highlight of tokenBasedHighlights) {
+      try {
+        if (!highlight.position) continue;
+        const parsed = JSON.parse(highlight.position);
+        if (parsed && parsed.version === 3 && Array.isArray(parsed.tokenIds)) {
+          const tokenIds = parsed.tokenIds as string[];
+          
+          // Find all token spans for this highlight
+          const tokenSpans: HTMLElement[] = [];
+          for (const tokenId of tokenIds) {
+            const span = tempDiv.querySelector(`#${tokenId}`) as HTMLElement;
+            if (span && span.id.startsWith('ritl-w-')) {
+              tokenSpans.push(span);
+            }
+          }
+
+          if (tokenSpans.length > 0) {
+            // Check if already highlighted
+            let alreadyHighlighted = false;
+            for (const span of tokenSpans) {
+              if (span.closest('mark[data-highlight-id]')) {
+                alreadyHighlighted = true;
+                break;
               }
             }
 
-            if (tokenSpans.length > 0) {
-              // Check if already highlighted
-              let alreadyHighlighted = false;
-              for (const span of tokenSpans) {
-                if (span.closest('mark[data-highlight-id]')) {
-                  alreadyHighlighted = true;
-                  break;
-                }
-              }
+            if (!alreadyHighlighted) {
+              // Create mark element
+              const mark = document.createElement('mark');
+              mark.setAttribute('data-highlight-id', highlight.id);
+              const hasNotes = highlight.notes && highlight.notes.length > 0;
+              mark.setAttribute('data-has-notes', hasNotes ? 'true' : 'false');
+              
+              const highlightColor =
+                theme === 'dark'
+                  ? '#664d00'
+                  : theme === 'sepia'
+                  ? '#f0e68c'
+                  : '#fff3cd';
+              const borderCss = hasNotes
+                ? `border-bottom: 2px solid ${
+                    theme === 'dark' ? '#ffc107' : '#ff9800'
+                  };`
+                : '';
+              
+              mark.style.cssText = `background-color:${highlightColor};padding:0.1em 0;border-radius:2px;cursor:pointer;${borderCss}`;
 
-              if (!alreadyHighlighted) {
-                // Create mark element
-                const mark = document.createElement('mark');
-                mark.setAttribute('data-highlight-id', highlight.id);
-                const hasNotes = highlight.notes && highlight.notes.length > 0;
-                mark.setAttribute('data-has-notes', hasNotes ? 'true' : 'false');
-                
-                const highlightColor =
-                  theme === 'dark'
-                    ? '#664d00'
-                    : theme === 'sepia'
-                    ? '#f0e68c'
-                    : '#fff3cd';
-                const borderCss = hasNotes
-                  ? `border-bottom: 2px solid ${
-                      theme === 'dark' ? '#ffc107' : '#ff9800'
-                    };`
-                  : '';
-                
-                mark.style.cssText = `background-color:${highlightColor};padding:0.1em 0;border-radius:2px;cursor:pointer;${borderCss}`;
-
-                // Sort spans by their position in DOM (by token index)
-                tokenSpans.sort((a, b) => {
-                  const aIndex = parseInt(a.id.replace('ritl-w-', ''), 10);
-                  const bIndex = parseInt(b.id.replace('ritl-w-', ''), 10);
-                  return aIndex - bIndex;
-                });
-
-                const firstSpan = tokenSpans[0];
-                const lastSpan = tokenSpans[tokenSpans.length - 1];
-                
-                // Create a range that covers all token spans
-                const range = document.createRange();
-                
-                // Find the start: beginning of first span
-                if (firstSpan.firstChild) {
-                  range.setStartBefore(firstSpan.firstChild);
-                } else {
-                  range.setStartBefore(firstSpan);
-                }
-                
-                // Find the end: end of last span
-                if (lastSpan.lastChild) {
-                  range.setEndAfter(lastSpan.lastChild);
-                } else {
-                  range.setEndAfter(lastSpan);
-                }
-                
-                // Extract all contents and wrap in mark
-                const contents = range.extractContents();
-                mark.appendChild(contents);
-                range.insertNode(mark);
-              }
-            }
-          }
-        } catch (e) {
-          console.error('Error processing token-based highlight:', e);
-          // Fall through to text-based processing
-          textBasedHighlights.push(highlight);
-        }
-      }
-
-      processedContent = tempDiv.innerHTML;
-    }
-
-    // Process text-based highlights (version 2 and legacy) using existing logic
-    if (textBasedHighlights.length === 0) {
-      return processedContent;
-    }
-
-    // Sort highlights by text length (longest first) to avoid partial matches
-    const sortedHighlights = [...textBasedHighlights].sort(
-      (a, b) => b.text.length - a.text.length
-    );
-
-    if (isHtmlContent) {
-      // --- HTML CONTENT BRANCH (simplified, no heavy loops) ---
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = processedContent;
-
-      const walker = document.createTreeWalker(
-        tempDiv,
-        NodeFilter.SHOW_TEXT,
-        null
-      );
-
-      let node: Node | null;
-      while ((node = walker.nextNode())) {
-        const textNode = node as Text;
-        const parentEl = textNode.parentElement;
-
-        if (!parentEl) continue;
-
-        // Skip text already inside a <mark> / highlighted element
-        let p: HTMLElement | null = parentEl;
-        let insideMark = false;
-        while (p && p !== tempDiv) {
-          if (p.tagName === 'MARK' || p.getAttribute('data-highlight-id')) {
-            insideMark = true;
-            break;
-          }
-          p = p.parentElement;
-        }
-        if (insideMark) continue;
-
-        const originalText = textNode.textContent || '';
-        if (!originalText.trim()) continue;
-
-        // Collect all highlight matches with their positions
-        interface HighlightMatch {
-          start: number;
-          end: number;
-          highlight: Highlight;
-          text: string;
-        }
-
-        const matches: HighlightMatch[] = [];
-
-        // Find all matches for all highlights in the original text
-        for (const highlight of sortedHighlights) {
-          const rawText = (highlight.text || '').trim();
-          if (!rawText) continue;
-
-          // ⚠️ CRITICAL FIX: Normalize highlight text pattern for flexible whitespace matching
-          // This allows the highlight to match even if the article text has varying spaces
-          // or non-breaking spaces that were lost in the content extraction/serialization.
-          // First escape regex special characters, then normalize whitespace patterns
-          const normalizedPattern = escapeRegExp(rawText).replace(/\s+/g, '\\s+');
-          
-          if (!normalizedPattern) continue;
-
-          // Find all occurrences using matchAll (more reliable than exec in loop)
-          const regex = new RegExp(normalizedPattern, 'gi');
-          const allMatches = Array.from(originalText.matchAll(regex));
-          
-          // Add all matches
-          for (const match of allMatches) {
-            if (match.index !== undefined) {
-              matches.push({
-                start: match.index,
-                end: match.index + match[0].length,
-                highlight: highlight,
-                text: match[0]
+              // Sort spans by their position in DOM (by token index)
+              tokenSpans.sort((a, b) => {
+                const aIndex = parseInt(a.id.replace('ritl-w-', ''), 10);
+                const bIndex = parseInt(b.id.replace('ritl-w-', ''), 10);
+                return aIndex - bIndex;
               });
+
+              const firstSpan = tokenSpans[0];
+              const lastSpan = tokenSpans[tokenSpans.length - 1];
+              
+              // Create a range that covers all token spans
+              const range = document.createRange();
+              
+              // Find the start: beginning of first span
+              if (firstSpan.firstChild) {
+                range.setStartBefore(firstSpan.firstChild);
+              } else {
+                range.setStartBefore(firstSpan);
+              }
+              
+              // Find the end: end of last span
+              if (lastSpan.lastChild) {
+                range.setEndAfter(lastSpan.lastChild);
+              } else {
+                range.setEndAfter(lastSpan);
+              }
+              
+              // Extract all contents and wrap in mark
+              const contents = range.extractContents();
+              mark.appendChild(contents);
+              range.insertNode(mark);
             }
           }
         }
-
-        // If no matches, skip this node
-        if (matches.length === 0) continue;
-
-        // Sort matches by start position, then by length (longest first for overlapping ones)
-        matches.sort((a, b) => {
-          if (a.start !== b.start) return a.start - b.start;
-          return b.end - a.end; // Longer matches first
-        });
-
-        // Remove overlapping matches - keep the first (which will be longest if same start)
-        const nonOverlappingMatches: HighlightMatch[] = [];
-        for (const current of matches) {
-          let overlaps = false;
-
-          // Check if this match overlaps with any already added
-          for (const added of nonOverlappingMatches) {
-            // Check for any overlap
-            if (
-              (current.start < added.end && current.end > added.start)
-            ) {
-              overlaps = true;
-              break;
-            }
-          }
-
-          if (!overlaps) {
-            nonOverlappingMatches.push(current);
-          }
-        }
-
-        // Build the replaced string from original text
-        let replaced = '';
-        let lastIndex = 0;
-
-        for (const match of nonOverlappingMatches) {
-          // Add text before this match
-          if (match.start > lastIndex) {
-            replaced += originalText.substring(lastIndex, match.start);
-          }
-
-          // Add the highlighted text
-          const hasNotes = match.highlight.notes && match.highlight.notes.length > 0;
-          const highlightColor =
-            theme === 'dark'
-              ? '#664d00'
-              : theme === 'sepia'
-              ? '#f0e68c'
-              : '#fff3cd';
-          const borderCss = hasNotes
-            ? `border-bottom: 2px solid ${
-                theme === 'dark' ? '#ffc107' : '#ff9800'
-              };`
-            : '';
-
-          replaced += `<mark data-highlight-id="${match.highlight.id}"
-                          data-has-notes="${hasNotes ? 'true' : 'false'}"
-                          style="background-color:${highlightColor};padding:0.1em 0;border-radius:2px;cursor:pointer;${borderCss}">
-                  ${match.text}
-                </mark>`;
-
-          lastIndex = match.end;
-        }
-
-        // Add remaining text after last match
-        if (lastIndex < originalText.length) {
-          replaced += originalText.substring(lastIndex);
-        }
-
-        // If nothing changed (shouldn't happen, but safety check)
-        if (replaced === originalText) continue;
-
-        // Replace this text node with a span containing the new HTML
-        const span = document.createElement('span');
-        span.innerHTML = replaced;
-
-        parentEl.replaceChild(span, textNode);
-        
-        // 🟢 FIX: Reset the TreeWalker's current node to the newly inserted span.
-        // The TreeWalker will now search for the next text node starting *after* this span.
-        walker.currentNode = span;
+      } catch (e) {
+        console.error('Error processing token-based highlight:', e);
       }
-
-      return tempDiv.innerHTML;
-    } else {
-      // ✅ --- REFACTORED PLAIN TEXT BRANCH (multi-occurrence and multi-highlight fix) ---
-      
-      const originalText = content;
-
-      // Collect all highlight matches with their positions (same logic as HTML branch)
-      interface HighlightMatch {
-        start: number;
-        end: number;
-        highlight: Highlight;
-        text: string;
-      }
-
-      const matches: HighlightMatch[] = [];
-
-      // Find all matches for all highlights in the original text
-      for (const highlight of sortedHighlights) {
-        const rawText = (highlight.text || '').trim();
-        if (!rawText) continue;
-
-        // ⚠️ CRITICAL FIX: Normalize highlight text pattern for flexible whitespace matching
-        // This allows the highlight to match even if the text has varying spaces
-        // First escape regex special characters, then normalize whitespace patterns
-        const normalizedPattern = escapeRegExp(rawText).replace(/\s+/g, '\\s+');
-        
-        if (!normalizedPattern) continue;
-
-        // Use global and case-insensitive matching
-        const regex = new RegExp(normalizedPattern, 'gi'); 
-        const allMatches = Array.from(originalText.matchAll(regex));
-        
-        // Add all matches
-        for (const match of allMatches) {
-          if (match.index !== undefined) {
-            matches.push({
-              start: match.index,
-              end: match.index + match[0].length,
-              highlight: highlight,
-              text: match[0] // Preserve matched text case
-            });
-          }
-        }
-      }
-
-      if (matches.length === 0) {
-        return content; // No matches found
-      }
-
-      // Sort matches by start position, then by length (longest first for overlapping ones)
-      matches.sort((a, b) => {
-        if (a.start !== b.start) return a.start - b.start;
-        return b.end - a.end; 
-      });
-
-      // Remove overlapping matches - keep the first (which will be longest if same start)
-      const nonOverlappingMatches: HighlightMatch[] = [];
-      for (const current of matches) {
-        let overlaps = false;
-
-        // Check if this match overlaps with any already added
-        for (const added of nonOverlappingMatches) {
-          // Check for any overlap
-          if (
-            (current.start < added.end && current.end > added.start)
-          ) {
-            overlaps = true;
-            break;
-          }
-        }
-
-        if (!overlaps) {
-          nonOverlappingMatches.push(current);
-        }
-      }
-
-      // Build the final highlighted string
-      let replaced = '';
-      let lastIndex = 0;
-
-      for (const match of nonOverlappingMatches) {
-        // Add text before this match
-        if (match.start > lastIndex) {
-          replaced += originalText.substring(lastIndex, match.start);
-        }
-
-        // Add the highlighted text (HTML string)
-        const hasNotes = match.highlight.notes && match.highlight.notes.length > 0;
-        const highlightColor =
-          theme === 'dark'
-            ? '#664d00'
-            : theme === 'sepia'
-            ? '#f0e68c'
-            : '#fff3cd';
-        const borderCss = hasNotes
-          ? `border-bottom: 2px solid ${
-              theme === 'dark' ? '#ffc107' : '#ff9800'
-            };`
-          : '';
-
-        replaced += `<mark data-highlight-id="${match.highlight.id}"
-                        data-has-notes="${hasNotes ? 'true' : 'false'}"
-                        style="background-color:${highlightColor};padding:0.1em 0;border-radius:2px;cursor:pointer;${borderCss}">
-                ${match.text}
-              </mark>`;
-
-        lastIndex = match.end;
-      }
-
-      // Add remaining text after last match
-      if (lastIndex < originalText.length) {
-        replaced += originalText.substring(lastIndex);
-      }
-
-      return replaced;
     }
+
+    return tempDiv.innerHTML;
   };
 
   // Get processed content - recalculate when highlights or content changes
