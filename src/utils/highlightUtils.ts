@@ -275,39 +275,90 @@ export function getTokenIdsFromRange(range: Range): string[] {
     const container = range.commonAncestorContainer;
     
     // Get the nearest Element ancestor for querying (Handles text node containers)
-    const containerElement = container.nodeType === Node.ELEMENT_NODE 
+    let containerElement = container.nodeType === Node.ELEMENT_NODE 
       ? container as Element 
       : container.parentElement;
     
     if (!containerElement) {
+      console.debug('[getTokenIdsFromRange] No container element found');
       return [];
     }
 
-    // Find all token spans in the container
-    const allTokenSpans = containerElement.querySelectorAll('[id^="ritl-w-"]');
+    // Find the container that actually contains token spans
+    // When selectNodeContents is used, commonAncestorContainer might be the span itself,
+    // so we need to go up the hierarchy to find a container that has tokens
+    let allTokenSpans = containerElement.querySelectorAll('[id^="ritl-w-"]');
+    
+    // If no tokens found, try going up the hierarchy
+    if (allTokenSpans.length === 0) {
+      let current: Node | null = containerElement;
+      while (current && current.nodeType === Node.ELEMENT_NODE) {
+        const element = current as Element;
+        allTokenSpans = element.querySelectorAll('[id^="ritl-w-"]');
+        if (allTokenSpans.length > 0) {
+          containerElement = element;
+          break;
+        }
+        current = current.parentNode;
+      }
+    }
+    
+    console.debug(`[getTokenIdsFromRange] Found ${allTokenSpans.length} token spans, range text: "${range.toString()}", container: ${containerElement.tagName}`);
     
     for (const span of Array.from(allTokenSpans)) {
       const element = span as HTMLElement;
       
       try {
+        // Verificação direta: se os boundaries da range estão dentro do elemento
+        // Isso captura o caso quando selectNodeContents foi usado no elemento
+        const rangeStartInElement = element.contains(range.startContainer) || element === range.startContainer;
+        const rangeEndInElement = element.contains(range.endContainer) || element === range.endContainer;
+        
+        if (rangeStartInElement && rangeEndInElement) {
+          console.debug(`[getTokenIdsFromRange] Found token ${element.id} via boundary check`);
+          if (!tokenIds.includes(element.id)) {
+            tokenIds.push(element.id);
+          }
+          continue;
+        }
+        
+        // Criar range do elemento para comparação de interseção
         const elementRange = document.createRange();
-        // Create a range that covers the element's contents for precise comparison
         elementRange.selectNodeContents(element);
         
-        // Standard Intersection Logic:
-        // The range (selection) ends after the element range starts,
-        // AND the range (selection) starts before the element range ends.
+        // Verificação 2: Se o elemento está completamente dentro da range
+        // (range começa antes ou no início do elemento E termina depois ou no fim do elemento)
+        try {
+          const elementContainedInRange = 
+            range.compareBoundaryPoints(Range.START_TO_START, elementRange) <= 0 &&
+            range.compareBoundaryPoints(Range.END_TO_END, elementRange) >= 0;
+          
+          if (elementContainedInRange) {
+            if (!tokenIds.includes(element.id)) {
+              tokenIds.push(element.id);
+            }
+            continue;
+          }
+        } catch (e) {
+          // Continue to next check if compareBoundaryPoints fails
+        }
+        
+        // Verificação 3: Interseção Estrita (para sobreposição parcial e múltiplos tokens)
         const isIntersecting = 
           range.compareBoundaryPoints(Range.END_TO_START, elementRange) < 0 && 
           range.compareBoundaryPoints(Range.START_TO_END, elementRange) > 0;
-        
-        if (isIntersecting) {
+          
+        // Verificação 4: Contenção ou Toque Exato usando intersectsNode
+        const isTouchingOrContained = range.intersectsNode(element); 
+
+        // Se houver sobreposição ou toque, adicionar o token
+        if (isIntersecting || isTouchingOrContained) {
+          console.debug(`[getTokenIdsFromRange] Found token ${element.id} via intersection (isIntersecting: ${isIntersecting}, isTouchingOrContained: ${isTouchingOrContained})`);
           if (!tokenIds.includes(element.id)) {
             tokenIds.push(element.id);
           }
         }
       } catch (e) {
-        // Continue if range comparison fails for any reason
         continue;
       }
     }
@@ -347,13 +398,8 @@ export function captureSelectionInfo(): SelectionInfo | null {
   }
   
   let range = selection.getRangeAt(0);
-  let text = range.toString().trim();
   
-  if (!text) {
-    return null;
-  }
-  
-  // Get container element
+  // Get container element first (needed for hasTokenSpans check)
   const container = range.commonAncestorContainer;
   const containerElement = container.nodeType === Node.TEXT_NODE 
     ? container.parentElement 
@@ -370,7 +416,8 @@ export function captureSelectionInfo(): SelectionInfo | null {
     return null;
   }
   
-  // Try to expand selection to complete tokens
+  // Try to expand selection to complete tokens FIRST
+  // This ensures we have a valid range even if the initial selection was empty or partial
   // Use expandSelectionToCompleteTokens which expands only start and end tokens
   const expandedRange = expandSelectionToCompleteTokens(range);
   
@@ -380,7 +427,13 @@ export function captureSelectionInfo(): SelectionInfo | null {
   }
   
   const finalRange = expandedRange;
-  text = expandedRange.toString().trim();
+  // Get text from the expanded range (more reliable than original range)
+  let text = expandedRange.toString().trim();
+  
+  // If still no text after expansion, return null
+  if (!text) {
+    return null;
+  }
   
   // Extract token IDs from the expanded range
   const tokenIds = getTokenIdsFromRange(expandedRange);

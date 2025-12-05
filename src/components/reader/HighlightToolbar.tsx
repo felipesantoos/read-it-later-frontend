@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { themeStyles } from '../../utils/themeStyles';
 import type { Theme } from '../../utils/themeStyles';
-import { captureSelectionInfo, getToolbarPosition, type SelectionInfo, hasTokenSpans, expandSelectionToCompleteTokens, findTokenSpanContainingNode } from '../../utils/highlightUtils';
+import { captureSelectionInfo, getToolbarPosition, type SelectionInfo, findTokenSpanContainingNode } from '../../utils/highlightUtils';
 import Button from '../Button';
 import { Sparkles, MessageSquare } from 'lucide-react';
 
@@ -28,7 +28,6 @@ export default function HighlightToolbar({
   const [isCreating, setIsCreating] = useState(false);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const capturedSelectionTextRef = useRef<string | null>(null);
-  const isSelectingRef = useRef<boolean>(false);
   const currentTheme = themeStyles[theme];
 
   useEffect(() => {
@@ -37,13 +36,13 @@ export default function HighlightToolbar({
       if (showNoteInput) return;
       
       const selection = window.getSelection();
-      // Permite que o código continue mesmo com seleção vazia, para ser expandida logo abaixo
+      
+      // Permite que o código continue se houver range, mesmo que seja vazia (clique)
       if (!selection || selection.rangeCount === 0) { 
         setIsVisible(false);
         setShowNoteInput(false);
         setNoteContent('');
         capturedSelectionTextRef.current = null;
-        isSelectingRef.current = false;
         return;
       }
 
@@ -51,85 +50,31 @@ export default function HighlightToolbar({
       if (contentRef.current && !contentRef.current.contains(selection.anchorNode)) {
         setIsVisible(false);
         capturedSelectionTextRef.current = null;
-        isSelectingRef.current = false;
-        return;
-      }
-
-      // Se a seleção for vazia (clique), confiamos que handleMouseUp já forçou a seleção do token.
-      // Se a seleção não for vazia, a lógica de expansão cuidará dela.
-      
-      const range = selection.getRangeAt(0);
-      const ancestorContainer = range.commonAncestorContainer;
-      
-      let finalRange = range;
-
-      if (hasTokenSpans(ancestorContainer)) {
-        // Tenta expandir para tokens completos (isto funciona para seleções parciais ou vazias)
-        const expandedRange = expandSelectionToCompleteTokens(range);
-        
-        if (expandedRange) {
-          
-          // Verifica se a seleção atual difere da seleção expandida
-          const rangesDiffer = 
-            range.startContainer !== expandedRange.startContainer ||
-            range.endContainer !== expandedRange.endContainer ||
-            range.startOffset !== expandedRange.startOffset ||
-            range.endOffset !== expandedRange.endOffset;
-
-          // Se a seleção difere, forçamos o SNAP (re-seleção) e saímos.
-          if (rangesDiffer) {
-            try {
-              selection.removeAllRanges();
-              selection.addRange(expandedRange);
-            } catch (e) {
-              console.error('Error expanding selection:', e);
-              setIsVisible(false);
-              return;
-            }
-            // Retorna para que o evento 'selectionchange' seja disparado novamente
-            // AGORA com a seleção completa, e entre na próxima iteração como rangesDiffer=false.
-            return; 
-          }
-
-          // Se a seleção não difere (já está completa ou foi forçada no mouseup),
-          // usamos o expandedRange (que deve ser idêntico ao range atual) para capturar info.
-          finalRange = expandedRange;
-
-        } else if (selection.toString().trim() === '') {
-          // Se não houver texto selecionado E a expansão falhou, apenas escondemos.
-          setIsVisible(false);
-          return;
-        }
-      }
-      
-      // Se a seleção ainda for vazia (e não tokenizada) ou se a expansão falhou, saímos.
-      if (finalRange.toString().trim() === '') {
-        setIsVisible(false);
         return;
       }
 
       // Se toolbar já está visível, não atualiza a posição a menos que o texto tenha mudado.
       if (isVisible && capturedSelectionTextRef.current) {
-        const currentText = finalRange.toString().trim();
+        // Usamos selection.toString() para o texto atual (mesmo que seja apenas parcial)
+        const currentText = selection.toString().trim(); 
         const capturedText = capturedSelectionTextRef.current.trim();
-        if (currentText.replace(/\s+/g, ' ') === capturedText.replace(/\s+/g, ' ')) {
+        
+        if (currentText.length > 0 && currentText.replace(/\s+/g, ' ') === capturedText.replace(/\s+/g, ' ')) {
+          // A seleção ainda é a mesma, não move a toolbar.
           return;
         }
       }
 
-      // Agora captura a informação da seleção (usando a range final expandida ou original)
+      // Agora, tentamos capturar a informação. 
+      // captureSelectionInfo() é quem deve lidar com a expansão interna (token snap).
       const info = captureSelectionInfo();
       
-      if (!info) {
+      if (!info || info.text.length === 0) {
         setIsVisible(false);
         return;
       }
-      
-      // Checa novamente se o texto é vazio (fallback)
-      if (info.text.length === 0) {
-        setIsVisible(false);
-        return;
-      }
+
+      // A partir daqui, temos uma seleção válida e expandida para tokens.
 
       // Get the positioned parent container for relative positioning
       const container = contentRef.current?.offsetParent as HTMLElement || contentRef.current?.parentElement;
@@ -156,24 +101,6 @@ export default function HighlightToolbar({
     };
 
     const handleMouseDown = (e: MouseEvent) => {
-      // Check if clicking inside content area
-      if (contentRef.current && contentRef.current.contains(e.target as Node)) {
-        const target = e.target as Node;
-        // Check if clicking on or inside a token span
-        let node: Node | null = target;
-        while (node && node !== contentRef.current) {
-          if (node.nodeType === Node.ELEMENT_NODE) {
-            const element = node as HTMLElement;
-            if (element.id && element.id.startsWith('ritl-w-')) {
-              // User is starting to select within a token
-              isSelectingRef.current = true;
-              break;
-            }
-          }
-          node = node.parentNode;
-        }
-      }
-
       // Hide toolbar if clicking outside (but not if clicking on the toolbar itself)
       if (toolbarRef.current && !toolbarRef.current.contains(e.target as Node)) {
         const selection = window.getSelection();
@@ -182,9 +109,7 @@ export default function HighlightToolbar({
           setShowNoteInput(false);
           setNoteContent('');
           capturedSelectionTextRef.current = null;
-          isSelectingRef.current = false;
         } else if (showNoteInput) {
-          // If note input is showing and clicking outside, just close the input but keep toolbar
           setShowNoteInput(false);
           setNoteContent('');
         }
@@ -194,33 +119,30 @@ export default function HighlightToolbar({
     const handleMouseUp = (e: MouseEvent) => {
       // Verifica se o mouseup ocorreu dentro da área de conteúdo
       if (!contentRef.current || !contentRef.current.contains(e.target as Node)) {
-        isSelectingRef.current = false;
         return;
       }
 
       const selection = window.getSelection();
       const selectionText = selection?.toString().trim() || '';
       
-      // Se não houve arrasto (selectionText está vazia) E o alvo é um token (clique)
+      // Se a seleção está vazia (clique) E o alvo é um token
       if (selectionText.length === 0) {
         const clickedToken = findTokenSpanContainingNode(e.target as Node);
         
         if (clickedToken) {
-          // FORÇA O SNAP: Se for um clique (seleção vazia) em um token,
-          // forçamos a seleção do token completo. Isso dispara o evento selectionchange.
+          // FORÇA O SNAP: Se for um clique em um token, forçamos a seleção do token completo.
+          // Isso dispara o evento selectionchange.
           try {
             const range = document.createRange();
             range.selectNodeContents(clickedToken);
             selection?.removeAllRanges();
             selection?.addRange(range);
-            // O handleSelection será executado no próximo ciclo de evento
+            // handleSelection() será chamado automaticamente pelo evento selectionchange
           } catch (error) {
             console.error('Error forcing single token selection on click:', error);
           }
         }
       }
-      
-      isSelectingRef.current = false;
     };
 
     document.addEventListener('selectionchange', handleSelection);
