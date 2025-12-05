@@ -35,75 +35,70 @@ export interface UseTTSReturn {
 }
 
 /**
- * Extract clean text from HTML content
+ * Element structure for TTS chunks mapped to DOM
  */
-function extractTextFromHTML(html: string): string {
-  if (!html) return '';
-  
-  // Check if it's HTML
-  const isHTML = /<[a-z][\s\S]*>/i.test(html);
-  
-  if (!isHTML) {
-    return html.trim();
-  }
-  
-  // Create temporary div to parse HTML
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = html;
-  
-  // Remove script and style elements
-  const scripts = tempDiv.querySelectorAll('script, style');
-  scripts.forEach(el => el.remove());
-  
-  // Get text content
-  let text = tempDiv.textContent || tempDiv.innerText || '';
-  
-  // Clean up whitespace
-  text = text
-    .replace(/\s+/g, ' ') // Multiple spaces to single space
-    .replace(/\n\s*\n/g, '\n\n') // Multiple newlines to double newline
-    .trim();
-  
-  return text;
+interface TTSChunkElement {
+  text: string;
+  domElement: HTMLElement;
+  chunkIndex: number; 
 }
 
 /**
- * Split text into chunks (sentences or phrases) for better control
+ * Parse content from DOM and create array of elements with direct DOM references.
+ * Uses a nesting check to ensure only top-level block elements are chosen as chunks.
  */
-function splitTextIntoChunks(text: string): string[] {
-  if (!text) return [];
+function parseContentToElements(contentRef: MutableRefObject<HTMLDivElement | null>, article: Article | null): TTSChunkElement[] {
+  if (!contentRef.current || !article) return [];
   
-  // Split by sentence endings, but keep them
-  const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+  const elements: TTSChunkElement[] = [];
+  let globalChunkIndex = 0;
   
-  // If no sentence endings found, split by paragraphs
-  if (sentences.length === 0) {
-    return text.split(/\n\n+/).filter(chunk => chunk.trim().length > 0);
-  }
+  // Selector for clear, readable block elements.
+  const textElementSelector = 'p, h1, h2, h3, h4, h5, h6, li, blockquote, figcaption, div[role="paragraph"]';
   
-  // Combine very short sentences
-  const chunks: string[] = [];
-  let currentChunk = '';
+  const allElements = contentRef.current.querySelectorAll(textElementSelector);
+  const processedElements = new Set<HTMLElement>();
   
-  for (const sentence of sentences) {
-    const trimmed = sentence.trim();
-    if (trimmed.length === 0) continue;
+  allElements.forEach((element) => {
+    const htmlElement = element as HTMLElement;
     
-    if (currentChunk.length + trimmed.length < 200) {
-      currentChunk += (currentChunk ? ' ' : '') + trimmed;
-    } else {
-      if (currentChunk) {
-        chunks.push(currentChunk);
-      }
-      currentChunk = trimmed;
+    if (processedElements.has(htmlElement)) return;
+    
+    // Check for nesting: Skip if this element is inside another valid chunk element
+    let parent: HTMLElement | null = htmlElement.parentElement;
+    let isNestedChunk = false;
+    
+    while (parent && parent !== contentRef.current) {
+        // If a parent is also a selected chunk type, we prioritize the parent (or skip the child if the parent is already processed)
+        if (parent.matches(textElementSelector)) {
+            isNestedChunk = true;
+            break;
+        }
+        parent = parent.parentElement;
     }
-  }
+    
+    if (isNestedChunk) {
+        processedElements.add(htmlElement); 
+        return;
+    }
+    
+    const elementText = htmlElement.textContent || '';
+    const trimmedText = elementText.trim();
+    
+    if (trimmedText.length < 3) return;
+    
+    elements.push({
+      text: trimmedText,
+      domElement: htmlElement,
+      chunkIndex: globalChunkIndex++,
+    });
+    
+    // Mark all children as processed to avoid double-reading nested elements
+    htmlElement.querySelectorAll(textElementSelector).forEach(child => processedElements.add(child as HTMLElement));
+  });
   
-  if (currentChunk) {
-    chunks.push(currentChunk);
-  }
-  
-  return chunks.length > 0 ? chunks : [text];
+  console.log('[TTS] Parsed', elements.length, 'HTML element chunks from DOM');
+  return elements;
 }
 
 export function useTTS(article: Article | null, contentRef: MutableRefObject<HTMLDivElement | null>): UseTTSReturn {
@@ -120,31 +115,27 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
   });
   const [progress, setProgress] = useState<TTSProgress | null>(null);
   
-  const chunksRef = useRef<string[]>([]);
+  const chunksRef = useRef<TTSChunkElement[]>([]);
   const currentChunkIndexRef = useRef(0);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const isPausedRef = useRef(false);
-  const highlightTimeoutRef = useRef<number | null>(null);
 
-  // Check browser support
+  // --- Hooks and Lifecycle ---
+
   useEffect(() => {
     const supported = 'speechSynthesis' in window;
     setIsSupported(supported);
     
     if (supported) {
-      // Load voices (may need to wait for voiceschanged event)
       const loadVoices = () => {
         const availableVoices = window.speechSynthesis.getVoices();
         setVoices(availableVoices);
         
-        // Try to find a Portuguese voice by default (only if not already set)
         setCurrentVoice(prev => {
-          if (prev) return prev; // Don't change if already set
+          if (prev) return prev; 
           
           if (availableVoices.length > 0) {
-            const ptVoice = availableVoices.find(
-              v => v.lang.startsWith('pt') || v.lang.startsWith('PT')
-            ) || availableVoices.find(v => v.default) || availableVoices[0];
+            const ptVoice = availableVoices.find(v => v.lang.startsWith('pt') || v.lang.startsWith('PT')) || availableVoices.find(v => v.default) || availableVoices[0];
             return ptVoice;
           }
           return null;
@@ -158,232 +149,64 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
         window.speechSynthesis.onvoiceschanged = null;
       };
     }
-  }, []); // Empty deps - only run once on mount
+  }, []);
 
-  // Extract and prepare text when article changes
+  // Extract HTML Elements when article or content changes
   useEffect(() => {
     if (!article) {
       chunksRef.current = [];
       return;
     }
     
-    // Combine title, description, and content
-    let fullText = '';
+    const timeoutId = setTimeout(() => {
+      if (contentRef.current) {
+        const parsedChunks = parseContentToElements(contentRef, article); 
+        chunksRef.current = parsedChunks;
+        currentChunkIndexRef.current = 0;
+        console.log('[TTS] Article parsed -', parsedChunks.length, 'chunks ready');
+      }
+    }, 200); 
     
-    if (article.title) {
-      fullText += article.title + '. ';
-    }
-    
-    if (article.description) {
-      fullText += article.description + '. ';
-    }
-    
-    if (article.content) {
-      const cleanContent = extractTextFromHTML(article.content);
-      fullText += cleanContent;
-    }
-    
-    // Split into chunks
-    chunksRef.current = splitTextIntoChunks(fullText.trim());
-    currentChunkIndexRef.current = 0;
-  }, [article]);
+    return () => clearTimeout(timeoutId);
+  }, [article, contentRef]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (utteranceRef.current) {
-        window.speechSynthesis.cancel();
-      }
-      if (highlightTimeoutRef.current) {
-        clearTimeout(highlightTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Highlight current text being read
-  const highlightCurrentText = useCallback((text: string) => {
-    if (!contentRef.current || !text) return;
-    
-    // Clear previous highlight
-    const previousHighlights = contentRef.current.querySelectorAll('.tts-highlight');
-    previousHighlights.forEach(el => {
-      const parent = el.parentNode;
-      if (parent) {
-        parent.replaceChild(document.createTextNode(el.textContent || ''), el);
-        parent.normalize();
-      }
-    });
-    
-    // Normalize text for comparison (remove extra whitespace)
-    const normalizedText = text.trim().replace(/\s+/g, ' ');
-    const searchText = normalizedText.substring(0, Math.min(100, normalizedText.length));
-    
-    // Find and highlight the text using a more robust approach
-    const walker = document.createTreeWalker(
-      contentRef.current,
-      NodeFilter.SHOW_TEXT,
-      {
-        acceptNode: (node) => {
-          // Skip text nodes inside script, style, or already highlighted elements
-          let parent = node.parentElement;
-          while (parent && parent !== contentRef.current) {
-            if (
-              parent.tagName === 'SCRIPT' ||
-              parent.tagName === 'STYLE' ||
-              parent.classList.contains('tts-highlight')
-            ) {
-              return NodeFilter.FILTER_REJECT;
-            }
-            parent = parent.parentElement;
-          }
-          return NodeFilter.FILTER_ACCEPT;
-        }
-      }
-    );
-    
-    let node: Node | null;
-    let found = false;
-    
-    while ((node = walker.nextNode()) && !found) {
-      const textNode = node as Text;
-      const nodeText = textNode.textContent || '';
-      const normalizedNodeText = nodeText.replace(/\s+/g, ' ');
-      
-      // Try to find the text in this node (case-insensitive)
-      const index = normalizedNodeText.toLowerCase().indexOf(searchText.toLowerCase());
-      if (index !== -1) {
-        try {
-          // Calculate the actual offset in the original text node
-          let actualOffset = 0;
-          let normalizedOffset = 0;
-          
-          // Find the actual character offset that corresponds to the normalized index
-          for (let i = 0; i < nodeText.length && normalizedOffset < index; i++) {
-            if (nodeText[i].match(/\s/)) {
-              // Skip whitespace in normalized text
-              if (normalizedNodeText[normalizedOffset]?.match(/\s/)) {
-                normalizedOffset++;
-              }
-            } else {
-              actualOffset++;
-              normalizedOffset++;
-            }
-          }
-          
-          const range = document.createRange();
-          const startOffset = actualOffset;
-          const endOffset = Math.min(actualOffset + searchText.length, nodeText.length);
-          
-          range.setStart(textNode, startOffset);
-          range.setEnd(textNode, endOffset);
-          
-          // Check if range is valid
-          if (range.collapsed) {
-            continue;
-          }
-          
-          const span = document.createElement('span');
-          span.className = 'tts-highlight';
-          span.style.cssText = 'background-color: rgba(255, 200, 0, 0.5); padding: 2px 0; border-radius: 2px; transition: background-color 0.2s;';
-          
-          try {
-            range.surroundContents(span);
-            found = true;
-            
-            // Scroll to highlight with a slight delay for smooth animation
-            setTimeout(() => {
-              span.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-            }, 100);
-          } catch (e) {
-            // If surroundContents fails, try extractContents approach
-            try {
-              const contents = range.extractContents();
-              span.appendChild(contents);
-              range.insertNode(span);
-              found = true;
-              
-              setTimeout(() => {
-                span.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-              }, 100);
-            } catch (e2) {
-              console.warn('Could not highlight text:', e2);
-            }
-          }
-        } catch (e) {
-          console.warn('Could not highlight text:', e);
-        }
-      }
-    }
-    
-    // If we couldn't find the exact text, try a simpler approach: highlight first visible paragraph
-    if (!found && contentRef.current) {
-      const paragraphs = contentRef.current.querySelectorAll('p, div, span');
-      for (let i = 0; i < paragraphs.length; i++) {
-        const p = paragraphs[i];
-        const pText = p.textContent || '';
-        if (pText.toLowerCase().includes(searchText.toLowerCase().substring(0, 30))) {
-          p.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          break;
-        }
-      }
-    }
-  }, [contentRef]);
+  // --- TTS Controls ---
 
   // Speak next chunk
   const speakNextChunk = useCallback(() => {
-    if (chunksRef.current.length === 0) {
+    if (chunksRef.current.length === 0 || currentChunkIndexRef.current >= chunksRef.current.length) {
+      console.log('[TTS] Finished all chunks - stopping');
       setState('stopped');
       setProgress(null);
       return;
     }
     
-    if (currentChunkIndexRef.current >= chunksRef.current.length) {
-      setState('stopped');
-      setProgress(null);
-      
-      // Clear highlight
-      if (contentRef.current) {
-        const highlights = contentRef.current.querySelectorAll('.tts-highlight');
-        highlights.forEach(el => {
-          el.classList.remove('tts-highlight');
-          el.removeAttribute('style');
-        });
-      }
-      
-      return;
-    }
-    
-    const chunk = chunksRef.current[currentChunkIndexRef.current];
-    if (!chunk) {
+    const chunkElement = chunksRef.current[currentChunkIndexRef.current];
+    if (!chunkElement) {
+      console.warn('[TTS] Invalid chunk at index', currentChunkIndexRef.current, '- skipping');
+      currentChunkIndexRef.current++;
       speakNextChunk();
       return;
     }
     
-    // Create utterance
-    const utterance = new SpeechSynthesisUtterance(chunk);
+    const { text } = chunkElement;
+    
+    console.log('[TTS] Speaking chunk', currentChunkIndexRef.current + 1, 'of', chunksRef.current.length, '- text preview:', text.substring(0, 50) + '...');
+    
+    const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = options.rate;
     utterance.pitch = options.pitch;
     utterance.volume = options.volume;
     utterance.lang = options.lang || 'pt-BR';
-    
     if (currentVoice) {
       utterance.voice = currentVoice;
+      console.log('[TTS] Using voice:', currentVoice.name, '- lang:', currentVoice.lang);
     }
-    
-    // Update progress
-    setProgress({
-      currentIndex: currentChunkIndexRef.current,
-      totalChunks: chunksRef.current.length,
-      currentText: chunk.substring(0, 100) + (chunk.length > 100 ? '...' : ''),
-      progress: (currentChunkIndexRef.current + 1) / chunksRef.current.length,
-    });
-    
-    // Highlight current chunk
-    highlightCurrentText(chunk);
     
     // Event handlers
     utterance.onend = () => {
-      // Only process if not paused (paused utterances should not increment index)
+      console.log('[TTS] Chunk', currentChunkIndexRef.current + 1, 'finished');
+      
       if (!isPausedRef.current) {
         currentChunkIndexRef.current++;
         speakNextChunk();
@@ -391,55 +214,54 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
     };
     
     utterance.onerror = (event) => {
-      console.error('TTS Error:', event);
+      console.error('[TTS] Error:', event);
       setState('stopped');
       setProgress(null);
     };
     
+    // Update progress
+    setProgress({
+      currentIndex: currentChunkIndexRef.current,
+      totalChunks: chunksRef.current.length,
+      currentText: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+      progress: (currentChunkIndexRef.current + 1) / chunksRef.current.length,
+    });
+    
     utteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
     setState('playing');
-  }, [options, currentVoice, highlightCurrentText]);
+    console.log('[TTS] Started speaking chunk', currentChunkIndexRef.current + 1);
+  }, [options, currentVoice]);
 
   const play = useCallback(() => {
-    if (!isSupported || !article) return;
-    
-    // Clear the onend handler before canceling to prevent index increment
-    if (utteranceRef.current) {
-      utteranceRef.current.onend = null;
+    if (!isSupported || !article) {
+      console.log('[TTS] Play called but not supported or no article');
+      return;
     }
     
-    // Always cancel any existing utterance before starting/resuming
-    window.speechSynthesis.cancel();
+    if (utteranceRef.current) utteranceRef.current.onend = null;
+      window.speechSynthesis.cancel();
     
-    // Check if we're resuming from pause using the ref (more reliable than state)
     const wasPaused = isPausedRef.current;
-    isPausedRef.current = false;
+      isPausedRef.current = false;
     
-    if (wasPaused) {
-      // Resume from where we paused (currentChunkIndexRef already has the right position)
-      setState('playing');
-      speakNextChunk();
-    } else {
-      // Start from beginning
+    if (!wasPaused) {
       currentChunkIndexRef.current = 0;
-      speakNextChunk();
+      console.log('[TTS] Starting playback from beginning');
+    } else {
+      console.log('[TTS] Resuming playback from chunk', currentChunkIndexRef.current + 1);
     }
+    
+    speakNextChunk();
   }, [isSupported, article, speakNextChunk]);
 
   const pause = useCallback(() => {
     if (!isSupported) return;
     
-    // Set paused flag FIRST to prevent onend from incrementing index
+    console.log('[TTS] Pausing at chunk', currentChunkIndexRef.current + 1);
     isPausedRef.current = true;
     
-    // Clear the onend handler before canceling to prevent index increment
-    if (utteranceRef.current) {
-      utteranceRef.current.onend = null;
-    }
-    
-    // Cancel current utterance instead of pausing
-    // speechSynthesis.pause() is unreliable across browsers
+    if (utteranceRef.current) utteranceRef.current.onend = null;
     window.speechSynthesis.cancel();
     setState('paused');
   }, [isSupported]);
@@ -447,27 +269,18 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
   const stop = useCallback(() => {
     if (!isSupported) return;
     
+    console.log('[TTS] Stopping playback');
     window.speechSynthesis.cancel();
     isPausedRef.current = false;
     currentChunkIndexRef.current = 0;
     setState('stopped');
     setProgress(null);
-    
-    // Clear highlight
-    if (contentRef.current) {
-      const highlights = contentRef.current.querySelectorAll('.tts-highlight');
-      highlights.forEach(el => {
-        el.classList.remove('tts-highlight');
-        el.removeAttribute('style');
-      });
-    }
   }, [isSupported]);
 
   const setRateValue = useCallback((newRate: number) => {
     setRate(newRate);
     setOptionsState(prev => ({ ...prev, rate: newRate }));
     
-    // Update current utterance if playing
     if (utteranceRef.current && state === 'playing') {
       utteranceRef.current.rate = newRate;
     }
@@ -477,7 +290,6 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
     setCurrentVoice(voice);
     setOptionsState(prev => ({ ...prev, voiceURI: voice?.voiceURI }));
     
-    // Update current utterance if playing
     if (utteranceRef.current && state === 'playing') {
       utteranceRef.current.voice = voice;
     }
@@ -486,7 +298,6 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
   const setOptions = useCallback((newOptions: Partial<TTSOptions>) => {
     setOptionsState(prev => ({ ...prev, ...newOptions }));
     
-    // Update current utterance if playing
     if (utteranceRef.current && state === 'playing') {
       if (newOptions.rate !== undefined) {
         utteranceRef.current.rate = newOptions.rate;
@@ -498,11 +309,8 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
       if (newOptions.volume !== undefined) {
         utteranceRef.current.volume = newOptions.volume;
       }
-      if (newOptions.voiceURI !== undefined && currentVoice) {
-        utteranceRef.current.voice = currentVoice;
-      }
     }
-  }, [state, currentVoice]);
+  }, [state]);
 
   return {
     state,
@@ -520,4 +328,3 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
     setOptions,
   };
 }
-
