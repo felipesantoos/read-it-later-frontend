@@ -11,7 +11,7 @@ export interface Article {
   siteName: string | null;
   content: string | null;
   contentType: 'ARTICLE' | 'BLOG' | 'PDF' | 'YOUTUBE' | 'TWITTER' | 'NEWSLETTER' | 'BOOK' | 'EBOOK';
-  status: 'UNREAD' | 'READING' | 'FINISHED' | 'ARCHIVED';
+  status: 'UNREAD' | 'READING' | 'PAUSED' | 'FINISHED' | 'ARCHIVED';
   isFavorited: boolean;
   language: string | null;
   attributes: Record<string, any> | null;
@@ -66,6 +66,7 @@ export interface UpdateArticleData {
 export interface ArticleCounts {
   UNREAD: number;
   READING: number;
+  PAUSED: number;
   FINISHED: number;
   ARCHIVED: number;
   total: number;

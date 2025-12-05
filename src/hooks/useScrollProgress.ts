@@ -66,23 +66,9 @@ export function useScrollProgress({ contentRef, article, onArticleUpdate }: UseS
           const response = await articlesApi.updateReadingProgress(currentArticle.id, progress);
           updatedArticle = response.data;
 
-          // Update status to READING when article is started (but not auto-update to FINISHED)
-          let newStatus: Article['status'] | undefined;
-          if (progress > 0 && currentArticle.status === 'UNREAD') {
-            newStatus = 'READING';
-          }
-
-          if (newStatus && newStatus !== currentArticle.status) {
-            const response = await articlesApi.update(currentArticle.id, { status: newStatus });
-            updatedArticle = response.data;
-          }
-
           // Update local state if we got an updated article
           if (updatedArticle) {
             onUpdateRef.current(updatedArticle);
-          } else if (newStatus) {
-            // Just update status if no full article response
-            onUpdateRef.current({ status: newStatus });
           }
         } catch (error) {
           console.error('Error updating progress:', error);

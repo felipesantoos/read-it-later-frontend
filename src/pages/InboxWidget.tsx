@@ -11,7 +11,7 @@ type ContentTypeFilter = 'all' | 'ARTICLE' | 'BLOG' | 'PDF' | 'YOUTUBE' | 'TWITT
 export default function InboxWidget() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<'UNREAD' | 'READING' | 'FINISHED' | 'all'>('UNREAD');
+  const [statusFilter, setStatusFilter] = useState<'UNREAD' | 'READING' | 'PAUSED' | 'FINISHED' | 'all'>('UNREAD');
   const [contentTypeFilter, setContentTypeFilter] = useState<ContentTypeFilter>('all');
   const [sortOption, setSortOption] = useState<SortOption>('date-desc');
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,6 +22,7 @@ export default function InboxWidget() {
   const [statusCounts, setStatusCounts] = useState<ArticleCounts>({
     UNREAD: 0,
     READING: 0,
+    PAUSED: 0,
     FINISHED: 0,
     ARCHIVED: 0,
     total: 0,
@@ -54,6 +55,10 @@ export default function InboxWidget() {
   }
 
   async function handleArticleUpdate() {
+    await Promise.all([loadArticles(), loadStatusCounts()]);
+  }
+
+  async function handleRefresh() {
     await Promise.all([loadArticles(), loadStatusCounts()]);
   }
 
@@ -185,6 +190,7 @@ export default function InboxWidget() {
 
   const unreadCount = statusCounts.UNREAD;
   const readingCount = statusCounts.READING;
+  const pausedCount = statusCounts.PAUSED;
   const finishedCount = statusCounts.FINISHED;
   
   // Get current reading session (most recently accessed article with READING status)
@@ -224,6 +230,18 @@ export default function InboxWidget() {
               {unreadCount}
             </span>
           )}
+          <button
+            onClick={handleRefresh}
+            title="Atualizar"
+            style={{ padding: '0.25rem', fontSize: '0.75rem', minWidth: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+              <path d="M21 3v5h-5"></path>
+              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+              <path d="M3 21v-5h5"></path>
+            </svg>
+          </button>
         </div>
         <div className="flex gap-1">
           <a
@@ -467,32 +485,39 @@ export default function InboxWidget() {
       )}
 
       {/* Status filter tabs */}
-      <div className="flex gap-1 mb-1" style={{ width: '100%' }}>
+      <div className="flex gap-1 mb-1" style={{ width: '100%', flexWrap: 'wrap' }}>
         <button
           onClick={() => setStatusFilter('UNREAD')}
           className={statusFilter === 'UNREAD' ? 'primary' : ''}
-          style={{ flex: 1, padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
+          style={{ flex: 1, minWidth: '120px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
         >
           Não Lidos ({unreadCount})
         </button>
         <button
           onClick={() => setStatusFilter('READING')}
           className={statusFilter === 'READING' ? 'primary' : ''}
-          style={{ flex: 1, padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
+          style={{ flex: 1, minWidth: '120px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
         >
           Lendo ({readingCount})
         </button>
         <button
+          onClick={() => setStatusFilter('PAUSED')}
+          className={statusFilter === 'PAUSED' ? 'primary' : ''}
+          style={{ flex: 1, minWidth: '120px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
+        >
+          Pausados ({pausedCount})
+        </button>
+        <button
           onClick={() => setStatusFilter('FINISHED')}
           className={statusFilter === 'FINISHED' ? 'primary' : ''}
-          style={{ flex: 1, padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
+          style={{ flex: 1, minWidth: '120px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
         >
           Lidos ({finishedCount})
         </button>
         <button
           onClick={() => setStatusFilter('all')}
           className={statusFilter === 'all' ? 'primary' : ''}
-          style={{ flex: 1, padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
+          style={{ flex: 1, minWidth: '120px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
         >
           Todos
         </button>

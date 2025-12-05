@@ -9,14 +9,12 @@ import TagsManager from '../TagsManager';
 import CollectionsManager from '../CollectionsManager';
 import HighlightsManager from '../HighlightsManager';
 import type { Highlight } from '../../api/highlights';
-import type { MutableRefObject } from 'react';
+import type { MutableRefObject, RefObject } from 'react';
 
 interface ReaderHeaderProps {
   article: Article;
   theme: Theme;
   onThemeChange: (theme: Theme) => void;
-  isTopBarVisible: boolean;
-  onToggleTopBar: () => void;
   fontSize: number;
   lineHeight: number;
   onFontSizeChange: (size: number) => void;
@@ -34,14 +32,13 @@ interface ReaderHeaderProps {
   highlights?: Highlight[];
   onHighlightsUpdate?: () => void;
   contentRef?: MutableRefObject<HTMLDivElement | null>;
+  onRefresh?: () => void;
 }
 
 export default function ReaderHeader({ 
   article, 
   theme, 
   onThemeChange, 
-  isTopBarVisible, 
-  onToggleTopBar,
   fontSize,
   lineHeight,
   onFontSizeChange,
@@ -58,7 +55,8 @@ export default function ReaderHeader({
   onCollectionsUpdate,
   highlights,
   onHighlightsUpdate,
-  contentRef
+  contentRef,
+  onRefresh
 }: ReaderHeaderProps) {
   const navigate = useNavigate();
   const currentTheme = themeStyles[theme];
@@ -440,7 +438,7 @@ export default function ReaderHeader({
           onUpdate={onHighlightsUpdate}
           theme={theme}
           compact={true}
-          contentRef={contentRef}
+          contentRef={contentRef as RefObject<HTMLDivElement> | undefined}
         />
 
         {/* Theme Button */}
@@ -455,20 +453,6 @@ export default function ReaderHeader({
           title="Alternar tema"
         >
           {theme === 'light' ? '🌙' : theme === 'dark' ? '📜' : '☀️'}
-        </button>
-        
-        {/* Toggle Top Bar Button */}
-        <button
-          onClick={onToggleTopBar}
-          style={{ 
-            padding: '0.25rem 0.5rem', 
-            fontSize: '0.75rem',
-            backgroundColor: currentTheme.buttonBg,
-            color: currentTheme.text
-          }}
-          title={isTopBarVisible ? 'Ocultar barra' : 'Mostrar barra'}
-        >
-          {isTopBarVisible ? '↑' : '↓'}
         </button>
         
         {/* Original Link */}

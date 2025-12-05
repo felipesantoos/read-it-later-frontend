@@ -5,7 +5,7 @@ import '../App.css';
 export default function HomePage() {
   const [token, setToken] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
-  const [currentReading, setCurrentReading] = useState<{ title: string; id: string } | null>(null);
+  const [currentReading, setCurrentReading] = useState<{ title: string; id: string }[]>([]);
 
   useEffect(() => {
     // Obter token da query string ou localStorage
@@ -31,20 +31,24 @@ export default function HomePage() {
       const originalToken = localStorage.getItem('auth_token');
       localStorage.setItem('auth_token', tokenValue);
       
-      const response = await articlesApi.list({ status: 'READING', limit: 1 });
+      const response = await articlesApi.list({ status: 'READING' });
       const readingArticles = response.data || [];
       
       if (readingArticles.length > 0) {
-        const mostRecent = readingArticles.sort((a, b) => {
+        const sortedArticles = readingArticles.sort((a, b) => {
           const aTime = a.lastReadAt ? new Date(a.lastReadAt).getTime() : 0;
           const bTime = b.lastReadAt ? new Date(b.lastReadAt).getTime() : 0;
           return bTime - aTime;
-        })[0];
-        
-        setCurrentReading({
-          title: mostRecent.title || mostRecent.url,
-          id: mostRecent.id,
         });
+        
+        setCurrentReading(
+          sortedArticles.map(article => ({
+            title: article.title || article.url,
+            id: article.id,
+          }))
+        );
+      } else {
+        setCurrentReading([]);
       }
       
       // Restore original token
@@ -107,7 +111,7 @@ export default function HomePage() {
       )}
 
       {/* Current Reading Session Status */}
-      {currentToken && currentReading && (
+      {currentToken && currentReading.length > 0 && (
         <div className="card mb-1" style={{ 
           padding: '0.75rem', 
           backgroundColor: '#e7f3ff', 
@@ -120,18 +124,21 @@ export default function HomePage() {
               Sessão de leitura ativa:
             </span>
           </div>
-          <div style={{ marginLeft: '1.5rem' }}>
-            <a
-              href={`/reader/${currentReading.id}?token=${currentToken}`}
-              style={{
-                fontSize: '0.9rem',
-                fontWeight: 600,
-                color: '#007bff',
-                textDecoration: 'none',
-              }}
-            >
-              {currentReading.title}
-            </a>
+          <div style={{ marginLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {currentReading.map((reading) => (
+              <a
+                key={reading.id}
+                href={`/reader/${reading.id}?token=${currentToken}`}
+                style={{
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  color: '#007bff',
+                  textDecoration: 'none',
+                }}
+              >
+                {reading.title}
+              </a>
+            ))}
           </div>
         </div>
       )}

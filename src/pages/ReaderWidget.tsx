@@ -20,11 +20,10 @@ export default function ReaderWidget() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [fontSize, setFontSize] = useState(24);
   const [lineHeight, setLineHeight] = useState(1.5);
-  const [theme, setTheme] = useState<'light' | 'dark' | 'sepia'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark' | 'sepia'>('sepia');
   const contentRef = useRef<HTMLDivElement | null>(null) as MutableRefObject<HTMLDivElement | null>;
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-  const [isTopBarVisible, setIsTopBarVisible] = useState(true);
 
   useEffect(() => {
     if (id) {
@@ -196,6 +195,10 @@ export default function ReaderWidget() {
     await loadHighlights();
   }
 
+  async function handleRefresh() {
+    await Promise.all([loadArticle(), loadHighlights()]);
+  }
+
   async function handleStatusChange(newStatus: Article['status']) {
     if (!article || isUpdatingStatus) return;
     setIsStatusDropdownOpen(false);
@@ -261,7 +264,6 @@ export default function ReaderWidget() {
       style={{ 
         display: 'flex', 
         flexDirection: 'column', 
-        height: 'calc(100vh - 2rem)', 
         overflow: 'hidden',
         backgroundColor: currentTheme.bg,
         color: currentTheme.text
@@ -277,13 +279,11 @@ export default function ReaderWidget() {
       )}
 
       {/* Header - Always visible */}
-      <div style={{ flexShrink: 0, width: '100%', marginBottom: isTopBarVisible ? '0' : '0.5rem' }}>
+      <div style={{ flexShrink: 0, width: '100%', marginBottom: '0.5rem' }}>
         <ReaderHeader
           article={article}
           theme={theme}
           onThemeChange={setTheme}
-          isTopBarVisible={isTopBarVisible}
-          onToggleTopBar={() => setIsTopBarVisible(!isTopBarVisible)}
           fontSize={fontSize}
           lineHeight={lineHeight}
           onFontSizeChange={setFontSize}

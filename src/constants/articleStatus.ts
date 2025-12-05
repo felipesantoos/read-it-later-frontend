@@ -1,18 +1,20 @@
-import type { Article } from '../api/articles';
+export type ArticleStatus = 'UNREAD' | 'READING' | 'PAUSED' | 'FINISHED' | 'ARCHIVED';
 
-export const statusColors: Record<Article['status'], string> = {
-  UNREAD: '#6c757d',
-  READING: '#007bff',
-  FINISHED: '#28a745',
-  ARCHIVED: '#6c757d',
+export const statusColors: Record<ArticleStatus, string> = {
+  UNREAD: '#dc3545', // Red
+  READING: '#ffc107', // Yellow
+  PAUSED: '#007bff', // Blue
+  FINISHED: '#28a745', // Green
+  ARCHIVED: '#6c757d', // Grey
 };
 
-export const statusLabels: Record<Article['status'], string> = {
+export const statusLabels: Record<ArticleStatus, string> = {
   UNREAD: 'Não Lido',
   READING: 'Lendo',
+  PAUSED: 'Pausado',
   FINISHED: 'Lido',
   ARCHIVED: 'Arquivado',
 };
 
-export const allStatuses: Article['status'][] = ['UNREAD', 'READING', 'FINISHED', 'ARCHIVED'];
+export const allStatuses: ArticleStatus[] = ['UNREAD', 'READING', 'PAUSED', 'FINISHED', 'ARCHIVED'];
 

@@ -25,6 +25,10 @@ export default function AnalyticsWidget() {
     }
   }
 
+  async function handleRefresh() {
+    await loadAnalytics();
+  }
+
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -62,7 +66,21 @@ export default function AnalyticsWidget() {
       )}
 
       <div className="flex-between mb-1" style={{ alignItems: 'center' }}>
-        <h2 className="widget-title" style={{ fontSize: '1rem', marginBottom: 0 }}>📊 Estatísticas</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <h2 className="widget-title" style={{ fontSize: '1rem', marginBottom: 0 }}>📊 Estatísticas</h2>
+          <button
+            onClick={handleRefresh}
+            title="Atualizar"
+            style={{ padding: '0.25rem', fontSize: '0.75rem', minWidth: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+              <path d="M21 3v5h-5"></path>
+              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+              <path d="M3 21v-5h5"></path>
+            </svg>
+          </button>
+        </div>
         <a
           href="/inbox"
           style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', textDecoration: 'none', color: 'inherit' }}
