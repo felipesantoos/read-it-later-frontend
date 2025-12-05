@@ -13,7 +13,7 @@ import type { Highlight } from '../../api/highlights';
 import type { MutableRefObject, RefObject } from 'react';
 import type { UseTTSReturn } from '../../hooks/useTTS';
 import Button from '../Button';
-import { ArrowLeft, Moon, ScrollText, Sun, ExternalLink, Pencil, Plus, RotateCw, X, Check, ChevronLeft, ChevronRight, RefreshCw, Star } from 'lucide-react';
+import { ArrowLeft, Moon, ScrollText, Sun, ExternalLink, Pencil, Plus, RotateCw, X, Check, ChevronLeft, ChevronRight, RefreshCw, Star, Highlighter } from 'lucide-react';
 
 interface ReaderHeaderProps {
   article: Article;
@@ -40,6 +40,8 @@ interface ReaderHeaderProps {
   onRefresh?: () => void;
   tts?: UseTTSReturn;
   onToggleTTSBar?: () => void;
+  isHighlightingEnabled?: boolean;
+  onHighlightingToggle?: () => void;
 }
 
 export default function ReaderHeader({ 
@@ -66,7 +68,9 @@ export default function ReaderHeader({
   contentRef,
   onRefresh,
   tts,
-  onToggleTTSBar
+  onToggleTTSBar,
+  isHighlightingEnabled = true,
+  onHighlightingToggle
 }: ReaderHeaderProps) {
   const navigate = useNavigate();
   const currentTheme = themeStyles[theme];
@@ -429,6 +433,21 @@ export default function ReaderHeader({
           compact={true}
           contentRef={contentRef as RefObject<HTMLDivElement> | undefined}
         />
+
+        {/* Highlight Toggle Button */}
+        {onHighlightingToggle && (
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<Highlighter size={14} />}
+            onClick={onHighlightingToggle}
+            title={isHighlightingEnabled ? "Disable highlights and notes" : "Enable highlights and notes"}
+            style={{ 
+              color: isHighlightingEnabled ? currentTheme.text : (currentTheme.secondaryText || '#999'),
+              opacity: isHighlightingEnabled ? 1 : 0.5
+            }}
+          />
+        )}
 
         {/* TTS Controls */}
         {tts && (

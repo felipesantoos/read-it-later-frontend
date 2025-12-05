@@ -11,6 +11,7 @@ interface HighlightToolbarProps {
   onHighlightWithNote: (text: string, position: string, noteContent: string) => Promise<void>;
   theme: Theme;
   contentRef: React.RefObject<HTMLDivElement | null>;
+  isEnabled?: boolean;
 }
 
 export default function HighlightToolbar({
@@ -19,6 +20,7 @@ export default function HighlightToolbar({
   onHighlightWithNote,
   theme,
   contentRef,
+  isEnabled = true,
 }: HighlightToolbarProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
@@ -31,6 +33,15 @@ export default function HighlightToolbar({
   const currentTheme = themeStyles[theme];
 
   useEffect(() => {
+    // Don't attach event listeners if highlighting is disabled
+    if (!isEnabled) {
+      setIsVisible(false);
+      setShowNoteInput(false);
+      setNoteContent('');
+      capturedSelectionTextRef.current = null;
+      return;
+    }
+
     const handleSelection = () => {
       // Don't hide if note input is showing
       if (showNoteInput) return;
@@ -154,7 +165,7 @@ export default function HighlightToolbar({
       document.removeEventListener('mousedown', handleMouseDown);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [contentRef, showNoteInput, isVisible]);
+  }, [contentRef, showNoteInput, isVisible, isEnabled]);
 
   // Adjust position if toolbar would go off screen
   useEffect(() => {
@@ -285,6 +296,11 @@ export default function HighlightToolbar({
     setNoteContent('');
   };
 
+  // Don't render anything if highlighting is disabled
+  if (!isEnabled) {
+    return null;
+  }
+
   if (!isVisible || !position || !selectionInfo) {
     return null;
   }
@@ -403,4 +419,5 @@ export default function HighlightToolbar({
     </div>
   );
 }
+
 

@@ -11,6 +11,7 @@ interface ArticleContentProps {
   fontSize: number;
   lineHeight: number;
   highlights?: Highlight[];
+  isHighlightingEnabled?: boolean;
 }
 
 /**
@@ -59,7 +60,7 @@ function extractYouTubeVideoId(url: string): string | null {
   return null;
 }
 
-export default function ArticleContent({ article, contentRef, theme, fontSize, lineHeight, highlights = [] }: ArticleContentProps) {
+export default function ArticleContent({ article, contentRef, theme, fontSize, lineHeight, highlights = [], isHighlightingEnabled = true }: ArticleContentProps) {
   const currentTheme = themeStyles[theme];
 
   // Handle image errors after HTML is rendered
@@ -263,7 +264,7 @@ export default function ArticleContent({ article, contentRef, theme, fontSize, l
         overflowY: 'auto',
         fontFamily: 'Georgia, serif',
       }}
-      className="article-content"
+      className={`article-content ${!isHighlightingEnabled ? 'highlights-disabled' : ''}`}
     >
       {/* Article Title and Description */}
       <div style={{ 

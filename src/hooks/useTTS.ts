@@ -39,15 +39,84 @@ export interface UseTTSReturn {
  */
 interface TTSChunkElement {
   text: string;
-  domElement: HTMLElement;
-  chunkIndex: number; 
+  spans: HTMLElement[]; // Array of spans with IDs (ritl-w-*)
+  chunkIndex: number;
+  domElement?: HTMLElement; // Keep for backward compatibility/fallback
 }
 
 /**
- * Parse content from DOM and create array of elements with direct DOM references.
- * Uses a nesting check to ensure only top-level block elements are chosen as chunks.
+ * Parse content from DOM and create array of chunks based on spans with IDs (ritl-w-*).
+ * Groups spans into sentence-like chunks for natural reading.
  */
 function parseContentToElements(contentRef: MutableRefObject<HTMLDivElement | null>, article: Article | null): TTSChunkElement[] {
+  if (!contentRef.current || !article) return [];
+  
+  // Try to find spans with IDs first
+  const allSpans = Array.from(contentRef.current.querySelectorAll('[id^="ritl-w-"]')) as HTMLElement[];
+  
+  // If no spans found, fallback to old behavior
+  if (allSpans.length === 0) {
+    console.log('[TTS] No token spans found, falling back to element-based parsing');
+    return parseContentToElementsFallback(contentRef, article);
+  }
+  
+  // Sort spans by their numeric index
+  allSpans.sort((a, b) => {
+    const aIndex = parseInt(a.id.replace('ritl-w-', ''), 10);
+    const bIndex = parseInt(b.id.replace('ritl-w-', ''), 10);
+    return aIndex - bIndex;
+  });
+  
+  const chunks: TTSChunkElement[] = [];
+  let currentChunkSpans: HTMLElement[] = [];
+  let currentChunkText: string[] = [];
+  let globalChunkIndex = 0;
+  
+  // Group spans into sentence-like chunks
+  // A chunk ends at sentence-ending punctuation (. ! ?) or at a reasonable length
+  const sentenceEndRegex = /[.!?。！？]\s*$/;
+  const maxChunkLength = 200; // Maximum characters per chunk
+  
+  for (let i = 0; i < allSpans.length; i++) {
+    const span = allSpans[i];
+    const spanText = span.textContent || '';
+    
+    currentChunkSpans.push(span);
+    currentChunkText.push(spanText);
+    
+    const currentText = currentChunkText.join('');
+    const endsWithSentencePunctuation = sentenceEndRegex.test(currentText);
+    const exceedsMaxLength = currentText.length >= maxChunkLength;
+    
+    // Create chunk if:
+    // 1. Ends with sentence punctuation, OR
+    // 2. Exceeds max length, OR
+    // 3. Is the last span
+    if (endsWithSentencePunctuation || exceedsMaxLength || i === allSpans.length - 1) {
+      const chunkText = currentChunkText.join('').trim();
+      
+      if (chunkText.length > 0) {
+        chunks.push({
+          text: chunkText,
+          spans: [...currentChunkSpans],
+          chunkIndex: globalChunkIndex++,
+        });
+      }
+      
+      currentChunkSpans = [];
+      currentChunkText = [];
+    }
+  }
+  
+  console.log('[TTS] Parsed', chunks.length, 'chunks from', allSpans.length, 'token spans');
+  return chunks;
+}
+
+/**
+ * Fallback parser for when token spans are not available.
+ * Uses the old element-based approach.
+ */
+function parseContentToElementsFallback(contentRef: MutableRefObject<HTMLDivElement | null>, article: Article | null): TTSChunkElement[] {
   if (!contentRef.current || !article) return [];
   
   const elements: TTSChunkElement[] = [];
@@ -89,15 +158,16 @@ function parseContentToElements(contentRef: MutableRefObject<HTMLDivElement | nu
     
     elements.push({
       text: trimmedText,
-      domElement: htmlElement,
+      spans: [], // No spans available in fallback mode
       chunkIndex: globalChunkIndex++,
+      domElement: htmlElement, // Keep for fallback
     });
     
     // Mark all children as processed to avoid double-reading nested elements
     htmlElement.querySelectorAll(textElementSelector).forEach(child => processedElements.add(child as HTMLElement));
   });
   
-  console.log('[TTS] Parsed', elements.length, 'HTML element chunks from DOM');
+  console.log('[TTS] Parsed', elements.length, 'HTML element chunks from DOM (fallback)');
   return elements;
 }
 
@@ -119,6 +189,7 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
   const currentChunkIndexRef = useRef(0);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const isPausedRef = useRef(false);
+  const activeSpansRef = useRef<HTMLElement[]>([]); // Track currently highlighted spans
 
   // --- Hooks and Lifecycle ---
 
@@ -170,6 +241,24 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
     return () => clearTimeout(timeoutId);
   }, [article, contentRef]);
 
+  // Cleanup highlights when state changes to stopped or component unmounts
+  useEffect(() => {
+    if (state === 'stopped' || state === 'idle') {
+      activeSpansRef.current.forEach(span => {
+        span.classList.remove('tts-active');
+      });
+      activeSpansRef.current = [];
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      activeSpansRef.current.forEach(span => {
+        span.classList.remove('tts-active');
+      });
+      activeSpansRef.current = [];
+    };
+  }, [state]);
+
   // --- TTS Controls ---
 
   // Speak next chunk
@@ -178,6 +267,11 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
       console.log('[TTS] Finished all chunks - stopping');
       setState('stopped');
       setProgress(null);
+      // Remove highlights when finished
+      activeSpansRef.current.forEach(span => {
+        span.classList.remove('tts-active');
+      });
+      activeSpansRef.current = [];
       return;
     }
     
@@ -193,6 +287,32 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
     
     console.log('[TTS] Speaking chunk', currentChunkIndexRef.current + 1, 'of', chunksRef.current.length, '- text preview:', text.substring(0, 50) + '...');
     
+    // Remove highlight from previous spans
+    activeSpansRef.current.forEach(span => {
+      span.classList.remove('tts-active');
+    });
+    activeSpansRef.current = [];
+
+    // Add highlight to current chunk spans
+    if (chunkElement.spans.length > 0) {
+      chunkElement.spans.forEach(span => {
+        span.classList.add('tts-active');
+        activeSpansRef.current.push(span);
+      });
+
+      // Scroll to first span of current chunk
+      const firstSpan = chunkElement.spans[0];
+      if (firstSpan && contentRef.current) {
+        requestAnimationFrame(() => {
+          firstSpan.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest',
+          });
+        });
+      }
+    }
+    
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = options.rate;
     utterance.pitch = options.pitch;
@@ -207,6 +327,12 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
     utterance.onend = () => {
       console.log('[TTS] Chunk', currentChunkIndexRef.current + 1, 'finished');
       
+      // Remove highlight from current spans before moving to next
+      activeSpansRef.current.forEach(span => {
+        span.classList.remove('tts-active');
+      });
+      activeSpansRef.current = [];
+      
       if (!isPausedRef.current) {
         currentChunkIndexRef.current++;
         speakNextChunk();
@@ -217,6 +343,11 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
       console.error('[TTS] Error:', event);
       setState('stopped');
       setProgress(null);
+      // Remove highlights on error
+      activeSpansRef.current.forEach(span => {
+        span.classList.remove('tts-active');
+      });
+      activeSpansRef.current = [];
     };
     
     // Update progress
@@ -231,7 +362,7 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
     window.speechSynthesis.speak(utterance);
     setState('playing');
     console.log('[TTS] Started speaking chunk', currentChunkIndexRef.current + 1);
-  }, [options, currentVoice]);
+  }, [options, currentVoice, contentRef]);
 
   const play = useCallback(() => {
     if (!isSupported || !article) {
@@ -264,6 +395,7 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
     if (utteranceRef.current) utteranceRef.current.onend = null;
     window.speechSynthesis.cancel();
     setState('paused');
+    // Keep highlights visible when paused (don't remove them)
   }, [isSupported]);
 
   const stop = useCallback(() => {
@@ -275,6 +407,11 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
     currentChunkIndexRef.current = 0;
     setState('stopped');
     setProgress(null);
+    // Remove highlights when stopping
+    activeSpansRef.current.forEach(span => {
+      span.classList.remove('tts-active');
+    });
+    activeSpansRef.current = [];
   }, [isSupported]);
 
   const setRateValue = useCallback((newRate: number) => {

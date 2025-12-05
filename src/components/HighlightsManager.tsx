@@ -6,7 +6,7 @@ import type { Theme } from '../utils/themeStyles';
 import { themeStyles } from '../utils/themeStyles';
 import { restoreSelectionFromPosition } from '../utils/highlightUtils';
 import Button from './Button';
-import { X, Pencil, MessageSquare, Plus } from 'lucide-react';
+import { X, Pencil, MessageSquare, Plus, Trash2 } from 'lucide-react';
 import '../App.css';
 
 interface HighlightsManagerProps {
@@ -36,7 +36,7 @@ export default function HighlightsManager({
   const [highlightForNote, setHighlightForNote] = useState<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; type: 'highlight' | 'note' | null; id: string | null }>({ isOpen: false, type: null, id: null });
+  const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; type: 'highlight' | 'note' | 'all' | null; id: string | null }>({ isOpen: false, type: null, id: null });
 
   useEffect(() => {
     if (currentHighlights.length > 0) {
@@ -205,6 +205,26 @@ export default function HighlightsManager({
     }
   }
 
+  function handleDeleteAllClick() {
+    setConfirmDialog({ isOpen: true, type: 'all', id: null });
+  }
+
+  async function handleDeleteAllConfirm() {
+    if (confirmDialog.type !== 'all') return;
+
+    try {
+      await highlightsApi.deleteAllByArticle(articleId);
+      await loadHighlights();
+      onUpdate?.();
+      setMessage({ text: 'All highlights deleted', type: 'success' });
+      setConfirmDialog({ isOpen: false, type: null, id: null });
+    } catch (error) {
+      console.error('Error deleting all highlights:', error);
+      setMessage({ text: 'Error deleting all highlights', type: 'error' });
+      setConfirmDialog({ isOpen: false, type: null, id: null });
+    }
+  }
+
   function handleDeleteCancel() {
     setConfirmDialog({ isOpen: false, type: null, id: null });
   }
@@ -293,10 +313,20 @@ export default function HighlightsManager({
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Header */}
-                <div style={{ padding: '0.75rem', borderBottom: `1px solid ${currentTheme.cardBorder}` }}>
+                <div style={{ padding: '0.75rem', borderBottom: `1px solid ${currentTheme.cardBorder}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h3 style={{ fontSize: '0.875rem', fontWeight: 600, margin: 0, color: currentTheme.text }}>
                     Highlights ({allHighlights.length})
                   </h3>
+                  {allHighlights.length > 0 && (
+                    <Button
+                      variant="icon"
+                      size="sm"
+                      icon={<Trash2 size={14} />}
+                      onClick={handleDeleteAllClick}
+                      title="Delete all highlights"
+                      style={{ color: '#dc3545', padding: '0.25rem' }}
+                    />
+                  )}
                 </div>
 
                 {/* Highlights list */}
@@ -524,6 +554,14 @@ export default function HighlightsManager({
         onConfirm={handleDeleteNoteConfirm}
         onCancel={handleDeleteCancel}
         confirmText="Delete"
+        cancelText="Cancel"
+      />
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen && confirmDialog.type === 'all'}
+        message={`Are you sure you want to delete all ${allHighlights.length} highlight${allHighlights.length !== 1 ? 's' : ''} and their notes? This action cannot be undone.`}
+        onConfirm={handleDeleteAllConfirm}
+        onCancel={handleDeleteCancel}
+        confirmText="Delete All"
         cancelText="Cancel"
       />
       </>

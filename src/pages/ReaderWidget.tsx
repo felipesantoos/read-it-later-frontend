@@ -29,6 +29,7 @@ export default function ReaderWidget() {
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [showTTSBar, setShowTTSBar] = useState(false);
+  const [isHighlightingEnabled, setIsHighlightingEnabled] = useState(true);
 
   // Função para atualizar estado local sem recarregar o artigo inteiro
   const updateArticleState = (updates: Partial<Article>) => {
@@ -342,6 +343,8 @@ export default function ReaderWidget() {
           onRefresh={handleRefresh}
           tts={tts}
           onToggleTTSBar={handleToggleTTSBar}
+          isHighlightingEnabled={isHighlightingEnabled}
+          onHighlightingToggle={() => setIsHighlightingEnabled(prev => !prev)}
         />
       </div>
 
@@ -362,6 +365,7 @@ export default function ReaderWidget() {
           fontSize={fontSize}
           lineHeight={lineHeight}
           highlights={highlights}
+          isHighlightingEnabled={isHighlightingEnabled}
         />
         
         {/* Highlight Toolbar - appears near selected text */}
@@ -371,6 +375,7 @@ export default function ReaderWidget() {
           onHighlightWithNote={handleCreateHighlightWithNote}
           theme={theme}
           contentRef={contentRef}
+          isEnabled={isHighlightingEnabled}
         />
       </div>
 

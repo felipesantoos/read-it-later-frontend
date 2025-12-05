@@ -52,6 +52,8 @@ export const highlightsApi = {
   update: (id: string, data: { text?: string; color?: string }) =>
     api.patch<ApiResponse<Highlight>>(`/highlights/${id}`, data),
   delete: (id: string) => api.delete(`/highlights/${id}`),
+  deleteAllByArticle: (articleId: string) =>
+    api.delete(`/highlights/article/${articleId}`),
   createNote: (highlightId: string, content: string) =>
     api.post<ApiResponse<Note>>(`/highlights/${highlightId}/notes`, { content }),
   listNotes: (params?: { articleId?: string; highlightId?: string }) => {
