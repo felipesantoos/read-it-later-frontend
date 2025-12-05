@@ -82,10 +82,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, ref) => 
       border: '1px solid currentColor',
     },
     icon: {
-      padding: '0.15rem',
       minWidth: 'auto',
       backgroundColor: 'transparent',
       color: 'inherit',
+      border: '1px solid currentColor',
     },
   };
 

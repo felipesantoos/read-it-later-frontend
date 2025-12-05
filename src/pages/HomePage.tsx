@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
 import { articlesApi } from '../api/articles';
 import Button from '../components/Button';
+import { useTheme } from '../contexts/ThemeContext';
+import { themeStyles } from '../utils/themeStyles';
 import { Inbox, Copy, BookOpen, Star, Sparkles, BarChart } from 'lucide-react';
 import '../App.css';
 
 export default function HomePage() {
+  const { theme } = useTheme();
+  const currentTheme = themeStyles[theme];
   const [token, setToken] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [currentReading, setCurrentReading] = useState<{ title: string; id: string }[]>([]);
@@ -101,7 +105,7 @@ export default function HomePage() {
   const currentToken = getToken();
 
   return (
-    <div className="widget-container">
+    <div className="widget-container" style={{ backgroundColor: currentTheme.bg, color: currentTheme.text }}>
       <h2 className="widget-title">Read It Later Widgets</h2>
 
       {!currentToken && (

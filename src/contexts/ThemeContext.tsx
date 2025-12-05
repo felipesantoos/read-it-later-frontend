@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { settingsApi } from '../api/settings';
 import { useAuth } from './AuthContext';
+import { themeStyles } from '../utils/themeStyles';
 import type { Theme } from '../utils/themeStyles';
 
 interface ThemeContextType {
@@ -21,6 +22,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function loadTheme() {
       if (!isAuthenticated) {
+        // Mesmo sem autenticação, aplica o tema padrão
         setIsLoading(false);
         return;
       }
@@ -65,6 +67,28 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setTheme('light');
     }
   };
+
+  // Aplicar tema globalmente no body e root
+  useEffect(() => {
+    const currentTheme = themeStyles[theme];
+    const body = document.body;
+    const root = document.documentElement;
+
+    // Aplicar no body
+    body.style.backgroundColor = currentTheme.bg;
+    body.style.color = currentTheme.text;
+
+    // Aplicar no root (#root)
+    const rootElement = document.getElementById('root');
+    if (rootElement) {
+      rootElement.style.backgroundColor = currentTheme.bg;
+      rootElement.style.color = currentTheme.text;
+    }
+
+    // Aplicar no html também
+    root.style.backgroundColor = currentTheme.bg;
+    root.style.color = currentTheme.text;
+  }, [theme]);
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, cycleTheme, isLoading }}>
