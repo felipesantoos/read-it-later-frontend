@@ -51,48 +51,44 @@ export default function ReadingNowWidget() {
         />
       )}
 
-      <div className="flex-between mb-1" style={{ alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <h2 className="widget-title" style={{ fontSize: '1rem', marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <BookOpen size={20} /> Reading Now
-          </h2>
-          <Button
-            variant="icon"
-            size="sm"
-            icon={<RefreshCw size={14} />}
-            onClick={handleRefresh}
-            title="Refresh"
-            style={{ color: currentTheme.text }}
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={theme === 'light' ? <Moon size={14} /> : theme === 'dark' ? <ScrollText size={14} /> : <Sun size={14} />}
-            onClick={cycleTheme}
-            title="Toggle theme"
-            style={{ color: currentTheme.text }}
-          />
-        </div>
-        <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<Inbox size={14} />}
-            onClick={() => window.location.href = '/inbox'}
-            style={{ color: currentTheme.text, textDecoration: 'none' }}
-          >
-            Inbox
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<Star size={14} />}
-            onClick={() => window.location.href = '/favorites'}
-            style={{ color: currentTheme.text, textDecoration: 'none' }}
-          >
-            Favoritos
-          </Button>
-        </div>
+      <div className="flex mb-1" style={{ alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <h2 className="widget-title" style={{ fontSize: '1rem', marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <BookOpen size={20} /> Reading Now
+        </h2>
+        <Button
+          variant="icon"
+          size="sm"
+          icon={<RefreshCw size={14} />}
+          onClick={handleRefresh}
+          title="Refresh"
+          style={{ color: currentTheme.text }}
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={theme === 'light' ? <Moon size={14} /> : theme === 'dark' ? <ScrollText size={14} /> : <Sun size={14} />}
+          onClick={cycleTheme}
+          title="Toggle theme"
+          style={{ color: currentTheme.text }}
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<Inbox size={14} />}
+          onClick={() => window.location.href = '/inbox'}
+          style={{ color: currentTheme.text, textDecoration: 'none' }}
+        >
+          Inbox
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<Star size={14} />}
+          onClick={() => window.location.href = '/favorites'}
+          style={{ color: currentTheme.text, textDecoration: 'none' }}
+        >
+          Favorites
+        </Button>
       </div>
 
       {loading ? (

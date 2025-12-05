@@ -220,71 +220,67 @@ export default function InboxWidget() {
         />
       )}
 
-      <div className="flex-between mb-1" style={{ alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <h2 className="widget-title" style={{ fontSize: '1rem', marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Inbox size={20} /> Inbox
-          </h2>
-          {unreadCount > 0 && (
-            <span
-              style={{
-                backgroundColor: '#dc3545',
-                color: 'white',
-                borderRadius: '12px',
-                padding: '0.15rem 0.5rem',
-                fontSize: '0.7rem',
-                fontWeight: 600,
-              }}
-            >
-              {unreadCount}
-            </span>
-          )}
-          <Button
-            variant="icon"
-            size="sm"
-            icon={<RefreshCw size={14} />}
-            onClick={handleRefresh}
-            title="Refresh"
-            style={{ color: currentTheme.text }}
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={theme === 'light' ? <Moon size={14} /> : theme === 'dark' ? <ScrollText size={14} /> : <Sun size={14} />}
-            onClick={cycleTheme}
-            title="Toggle theme"
-            style={{ color: currentTheme.text }}
-          />
-        </div>
-        <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<BookOpen size={14} />}
-            onClick={() => window.location.href = '/reading-now'}
-            style={{ color: currentTheme.text, textDecoration: 'none' }}
+      <div className="flex mb-1" style={{ alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <h2 className="widget-title" style={{ fontSize: '1rem', marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Inbox size={20} /> Inbox
+        </h2>
+        {unreadCount > 0 && (
+          <span
+            style={{
+              backgroundColor: '#dc3545',
+              color: 'white',
+              borderRadius: '12px',
+              padding: '0.15rem 0.5rem',
+              fontSize: '0.7rem',
+              fontWeight: 600,
+            }}
           >
-            Reading
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<Star size={14} />}
-            onClick={() => window.location.href = '/favorites'}
-            style={{ color: currentTheme.text, textDecoration: 'none' }}
-          >
-            Favorites
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<BarChart size={14} />}
-            onClick={() => window.location.href = '/analytics'}
-            style={{ color: currentTheme.text, textDecoration: 'none' }}
-          >
-            Stats
-          </Button>
-        </div>
+            {unreadCount}
+          </span>
+        )}
+        <Button
+          variant="icon"
+          size="sm"
+          icon={<RefreshCw size={14} />}
+          onClick={handleRefresh}
+          title="Refresh"
+          style={{ color: currentTheme.text }}
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={theme === 'light' ? <Moon size={14} /> : theme === 'dark' ? <ScrollText size={14} /> : <Sun size={14} />}
+          onClick={cycleTheme}
+          title="Toggle theme"
+          style={{ color: currentTheme.text }}
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<BookOpen size={14} />}
+          onClick={() => window.location.href = '/reading-now'}
+          style={{ color: currentTheme.text, textDecoration: 'none' }}
+        >
+          Reading
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<Star size={14} />}
+          onClick={() => window.location.href = '/favorites'}
+          style={{ color: currentTheme.text, textDecoration: 'none' }}
+        >
+          Favorites
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<BarChart size={14} />}
+          onClick={() => window.location.href = '/analytics'}
+          style={{ color: currentTheme.text, textDecoration: 'none' }}
+        >
+          Stats
+        </Button>
       </div>
 
       {/* Save URL input */}

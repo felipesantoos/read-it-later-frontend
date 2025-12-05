@@ -125,7 +125,7 @@ export default function ReaderHeader({
   };
 
   return (
-    <div className="flex-between mb-1" style={{ alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+    <div className="flex mb-1" style={{ alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
       <Button
         variant="ghost"
         size="sm"
