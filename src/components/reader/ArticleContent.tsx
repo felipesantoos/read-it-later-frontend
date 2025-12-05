@@ -117,15 +117,136 @@ export default function ArticleContent({ article, contentRef, theme, fontSize, l
       return content;
     }
 
+    // Separate highlights by version: token-based (v3) vs text-based (v2/legacy)
+    const tokenBasedHighlights: Highlight[] = [];
+    const textBasedHighlights: Highlight[] = [];
+
+    for (const highlight of highlightsToProcess) {
+      if (highlight.position) {
+        try {
+          const parsed = JSON.parse(highlight.position);
+          if (parsed && parsed.version === 3 && Array.isArray(parsed.tokenIds)) {
+            tokenBasedHighlights.push(highlight);
+            continue;
+          }
+        } catch {
+          // Invalid JSON, treat as text-based
+        }
+      }
+      textBasedHighlights.push(highlight);
+    }
+
+    // Process token-based highlights first (more precise)
+    let processedContent: string = content;
+    if (isHtmlContent && tokenBasedHighlights.length > 0) {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = processedContent || '';
+
+      for (const highlight of tokenBasedHighlights) {
+        try {
+          if (!highlight.position) continue;
+          const parsed = JSON.parse(highlight.position);
+          if (parsed && parsed.version === 3 && Array.isArray(parsed.tokenIds)) {
+            const tokenIds = parsed.tokenIds as string[];
+            
+            // Find all token spans for this highlight
+            const tokenSpans: HTMLElement[] = [];
+            for (const tokenId of tokenIds) {
+              const span = tempDiv.querySelector(`#${tokenId}`) as HTMLElement;
+              if (span && span.id.startsWith('ritl-w-')) {
+                tokenSpans.push(span);
+              }
+            }
+
+            if (tokenSpans.length > 0) {
+              // Check if already highlighted
+              let alreadyHighlighted = false;
+              for (const span of tokenSpans) {
+                if (span.closest('mark[data-highlight-id]')) {
+                  alreadyHighlighted = true;
+                  break;
+                }
+              }
+
+              if (!alreadyHighlighted) {
+                // Create mark element
+                const mark = document.createElement('mark');
+                mark.setAttribute('data-highlight-id', highlight.id);
+                const hasNotes = highlight.notes && highlight.notes.length > 0;
+                mark.setAttribute('data-has-notes', hasNotes ? 'true' : 'false');
+                
+                const highlightColor =
+                  theme === 'dark'
+                    ? '#664d00'
+                    : theme === 'sepia'
+                    ? '#f0e68c'
+                    : '#fff3cd';
+                const borderCss = hasNotes
+                  ? `border-bottom: 2px solid ${
+                      theme === 'dark' ? '#ffc107' : '#ff9800'
+                    };`
+                  : '';
+                
+                mark.style.cssText = `background-color:${highlightColor};padding:0.1em 0;border-radius:2px;cursor:pointer;${borderCss}`;
+
+                // Sort spans by their position in DOM (by token index)
+                tokenSpans.sort((a, b) => {
+                  const aIndex = parseInt(a.id.replace('ritl-w-', ''), 10);
+                  const bIndex = parseInt(b.id.replace('ritl-w-', ''), 10);
+                  return aIndex - bIndex;
+                });
+
+                const firstSpan = tokenSpans[0];
+                const lastSpan = tokenSpans[tokenSpans.length - 1];
+                
+                // Create a range that covers all token spans
+                const range = document.createRange();
+                
+                // Find the start: beginning of first span
+                if (firstSpan.firstChild) {
+                  range.setStartBefore(firstSpan.firstChild);
+                } else {
+                  range.setStartBefore(firstSpan);
+                }
+                
+                // Find the end: end of last span
+                if (lastSpan.lastChild) {
+                  range.setEndAfter(lastSpan.lastChild);
+                } else {
+                  range.setEndAfter(lastSpan);
+                }
+                
+                // Extract all contents and wrap in mark
+                const contents = range.extractContents();
+                mark.appendChild(contents);
+                range.insertNode(mark);
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Error processing token-based highlight:', e);
+          // Fall through to text-based processing
+          textBasedHighlights.push(highlight);
+        }
+      }
+
+      processedContent = tempDiv.innerHTML;
+    }
+
+    // Process text-based highlights (version 2 and legacy) using existing logic
+    if (textBasedHighlights.length === 0) {
+      return processedContent;
+    }
+
     // Sort highlights by text length (longest first) to avoid partial matches
-    const sortedHighlights = [...highlightsToProcess].sort(
+    const sortedHighlights = [...textBasedHighlights].sort(
       (a, b) => b.text.length - a.text.length
     );
 
     if (isHtmlContent) {
       // --- HTML CONTENT BRANCH (simplified, no heavy loops) ---
       const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = content;
+      tempDiv.innerHTML = processedContent;
 
       const walker = document.createTreeWalker(
         tempDiv,

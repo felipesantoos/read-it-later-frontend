@@ -34,6 +34,15 @@ interface LegacyPositionInfo {
 }
 
 /**
+ * Token-based position information (Version 3)
+ */
+export interface TokenBasedPosition {
+  version: 3;
+  tokenIds: string[]; // Array de IDs ordenados como ['ritl-w-0', 'ritl-w-1', ...] - fonte de verdade para posição
+  text: string; // Texto completo do highlight - útil para validação, busca e exibição
+}
+
+/**
  * Get XPath for an element (does not include text nodes)
  */
 function getXPath(element: Node): string {
@@ -152,6 +161,220 @@ function findArticleRoot(node: Node): Node {
 }
 
 /**
+ * Check if a node or its ancestors contain token spans (ritl-w-*)
+ */
+export function hasTokenSpans(container: Node): boolean {
+  if (container.nodeType === Node.ELEMENT_NODE) {
+    const element = container as Element;
+    // Check if this element or any descendant has a token span
+    if (element.querySelector && element.querySelector('[id^="ritl-w-"]')) {
+      return true;
+    }
+  }
+  
+  // Check parent containers
+  let current: Node | null = container;
+  while (current && current.nodeType === Node.ELEMENT_NODE) {
+    const element = current as Element;
+    if (element.querySelector && element.querySelector('[id^="ritl-w-"]')) {
+      return true;
+    }
+    current = current.parentNode;
+  }
+  
+  return false;
+}
+
+/**
+ * Expand a selection to include only complete tokens (spans with IDs ritl-w-*)
+ * If the selection starts or ends in the middle of a token span, it expands to include the full span
+ */
+export function expandSelectionToTokens(range: Range): Range | null {
+  try {
+    // Check if the container has token spans
+    const container = range.commonAncestorContainer;
+    if (!hasTokenSpans(container)) {
+      return null; // No tokens available, return null to use fallback
+    }
+
+    // Find all token spans that are within or partially covered by the range
+    const tokenSpans: HTMLElement[] = [];
+    
+    // Get the container element for querying
+    const containerElement = container.nodeType === Node.ELEMENT_NODE 
+      ? container as Element 
+      : container.parentElement;
+    
+    if (!containerElement) {
+      return null;
+    }
+
+    // Find all token spans in the document that might intersect with the range
+    const allTokenSpans = containerElement.querySelectorAll('[id^="ritl-w-"]');
+    
+    for (const span of Array.from(allTokenSpans)) {
+      const element = span as HTMLElement;
+      
+      // Create a range for this span
+      const spanRange = document.createRange();
+      spanRange.selectNodeContents(element);
+      
+      // Check if ranges intersect (span is within or overlaps with selection)
+      const startComparison = range.compareBoundaryPoints(Range.START_TO_END, spanRange);
+      const endComparison = range.compareBoundaryPoints(Range.END_TO_START, spanRange);
+      
+      if (startComparison >= 0 && endComparison <= 0) {
+        // Range fully contains or overlaps with span
+        tokenSpans.push(element);
+      } else {
+        // Check if range boundaries are inside this span
+        const rangeStart = range.startContainer;
+        const rangeEnd = range.endContainer;
+        
+        if (
+          (element.contains(rangeStart) || element === rangeStart) ||
+          (element.contains(rangeEnd) || element === rangeEnd)
+        ) {
+          tokenSpans.push(element);
+        }
+      }
+    }
+
+    if (tokenSpans.length === 0) {
+      return null; // No token spans found
+    }
+
+    // Sort spans by their position in the DOM (using their token index)
+    tokenSpans.sort((a, b) => {
+      const aIndex = parseInt(a.id.replace('ritl-w-', ''), 10);
+      const bIndex = parseInt(b.id.replace('ritl-w-', ''), 10);
+      return aIndex - bIndex;
+    });
+
+    // Create a new range that covers from the start of the first span to the end of the last span
+    const firstSpan = tokenSpans[0];
+    const lastSpan = tokenSpans[tokenSpans.length - 1];
+
+    const expandedRange = document.createRange();
+    
+    // Set start to the beginning of the first span
+    if (firstSpan.firstChild) {
+      if (firstSpan.firstChild.nodeType === Node.TEXT_NODE) {
+        expandedRange.setStart(firstSpan.firstChild, 0);
+      } else {
+        expandedRange.setStartBefore(firstSpan.firstChild);
+      }
+    } else {
+      expandedRange.setStartBefore(firstSpan);
+    }
+    
+    // Set end to the end of the last span
+    if (lastSpan.lastChild) {
+      if (lastSpan.lastChild.nodeType === Node.TEXT_NODE) {
+        const textNode = lastSpan.lastChild as Text;
+        expandedRange.setEnd(textNode, textNode.length);
+      } else {
+        expandedRange.setEndAfter(lastSpan.lastChild);
+      }
+    } else {
+      expandedRange.setEndAfter(lastSpan);
+    }
+
+    return expandedRange;
+  } catch (e) {
+    console.error('Error expanding selection to tokens:', e);
+    return null;
+  }
+}
+
+/**
+ * Extract all token IDs (ritl-w-{index}) from a Range
+ * Returns array of IDs ordered by their position in the document
+ */
+export function getTokenIdsFromRange(range: Range): string[] {
+  const tokenIds: string[] = [];
+  
+  try {
+    // Use TreeWalker to traverse all elements in the range
+    const container = range.commonAncestorContainer;
+    const startContainer = range.startContainer;
+    const endContainer = range.endContainer;
+    
+    // Create a range that covers the common ancestor
+    const walker = document.createTreeWalker(
+      container.nodeType === Node.ELEMENT_NODE 
+        ? container as Element 
+        : container.parentElement || document.body,
+      NodeFilter.SHOW_ELEMENT,
+      {
+        acceptNode: (node: Node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            const element = node as HTMLElement;
+            const id = element.id;
+            if (id && id.startsWith('ritl-w-')) {
+              // Check if this element is within the range
+              const elementRange = document.createRange();
+              elementRange.selectNodeContents(element);
+              
+              // Check if ranges intersect
+              if (
+                range.compareBoundaryPoints(Range.START_TO_END, elementRange) >= 0 &&
+                range.compareBoundaryPoints(Range.END_TO_START, elementRange) <= 0
+              ) {
+                return NodeFilter.FILTER_ACCEPT;
+              }
+              
+              // Also check if range boundaries are inside this element
+              if (
+                (element.contains(startContainer) || element === startContainer) ||
+                (element.contains(endContainer) || element === endContainer)
+              ) {
+                return NodeFilter.FILTER_ACCEPT;
+              }
+            }
+          }
+          return NodeFilter.FILTER_SKIP;
+        }
+      }
+    );
+
+    let node: Node | null;
+    while ((node = walker.nextNode())) {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as HTMLElement;
+        const id = element.id;
+        if (id && id.startsWith('ritl-w-')) {
+          tokenIds.push(id);
+        }
+      }
+    }
+
+    // Sort by numeric index to ensure correct order
+    tokenIds.sort((a, b) => {
+      const aIndex = parseInt(a.replace('ritl-w-', ''), 10);
+      const bIndex = parseInt(b.replace('ritl-w-', ''), 10);
+      return aIndex - bIndex;
+    });
+
+    return tokenIds;
+  } catch (e) {
+    console.error('Error getting token IDs from range:', e);
+    return [];
+  }
+}
+
+/**
+ * Create token-based position information (Version 3)
+ */
+export function createTokenBasedPosition(tokenIds: string[], text: string): TokenBasedPosition {
+  return {
+    version: 3,
+    tokenIds,
+    text,
+  };
+}
+
+/**
  * Create anchor information from a Range
  */
 export function createAnchorFromRange(range: Range, _root?: Node): AnchorInfo {
@@ -181,7 +404,7 @@ export function createAnchorFromRange(range: Range, _root?: Node): AnchorInfo {
 }
 
 /**
- * Capture selection information including position (using anchor-based system)
+ * Capture selection information including position (using token-based system when available, fallback to anchor-based)
  */
 export function captureSelectionInfo(root?: Node): SelectionInfo | null {
   const selection = window.getSelection();
@@ -189,8 +412,8 @@ export function captureSelectionInfo(root?: Node): SelectionInfo | null {
     return null;
   }
   
-  const range = selection.getRangeAt(0);
-  const text = range.toString().trim();
+  let range = selection.getRangeAt(0);
+  let text = range.toString().trim();
   
   if (!text) {
     return null;
@@ -206,17 +429,48 @@ export function captureSelectionInfo(root?: Node): SelectionInfo | null {
     return null;
   }
   
-  // Create anchor-based position (Version 2)
-  const anchorInfo = createAnchorFromRange(range, root);
-  const position = JSON.stringify(anchorInfo);
+  // Check if content has token spans (new articles)
+  let position: string;
+  let finalRange = range.cloneRange();
   
-  // Get context text
-  const context = getContextText(range, container);
+  if (hasTokenSpans(container)) {
+    // Try to expand selection to complete tokens
+    const expandedRange = expandSelectionToTokens(range);
+    
+    if (expandedRange) {
+      finalRange = expandedRange;
+      text = expandedRange.toString().trim();
+      
+      // Extract token IDs from the expanded range
+      const tokenIds = getTokenIdsFromRange(expandedRange);
+      
+      if (tokenIds.length > 0) {
+        // Use token-based position (Version 3)
+        const tokenPosition = createTokenBasedPosition(tokenIds, text);
+        position = JSON.stringify(tokenPosition);
+      } else {
+        // Fallback to anchor-based (Version 2)
+        const anchorInfo = createAnchorFromRange(finalRange, root);
+        position = JSON.stringify(anchorInfo);
+      }
+    } else {
+      // No tokens found, use anchor-based (Version 2)
+      const anchorInfo = createAnchorFromRange(range, root);
+      position = JSON.stringify(anchorInfo);
+    }
+  } else {
+    // Old article without token spans, use anchor-based (Version 2)
+    const anchorInfo = createAnchorFromRange(range, root);
+    position = JSON.stringify(anchorInfo);
+  }
+  
+  // Get context text from the final range
+  const context = getContextText(finalRange, container);
   
   return {
     text,
     position,
-    range: range.cloneRange(),
+    range: finalRange,
     beforeText: context.before,
     afterText: context.after,
   };
@@ -426,11 +680,26 @@ export function isAnchorFormat(position: string): boolean {
 }
 
 /**
- * Parse position string and return either AnchorInfo or LegacyPositionInfo
+ * Check if position string is in token-based format (Version 3)
  */
-export function parsePosition(position: string): AnchorInfo | LegacyPositionInfo | null {
+export function isTokenBasedFormat(position: string): boolean {
   try {
     const parsed = JSON.parse(position);
+    return parsed && parsed.version === 3 && Array.isArray(parsed.tokenIds);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Parse position string and return TokenBasedPosition, AnchorInfo, or LegacyPositionInfo
+ */
+export function parsePosition(position: string): TokenBasedPosition | AnchorInfo | LegacyPositionInfo | null {
+  try {
+    const parsed = JSON.parse(position);
+    if (parsed && parsed.version === 3 && Array.isArray(parsed.tokenIds)) {
+      return parsed as TokenBasedPosition;
+    }
     if (parsed && parsed.version === 2) {
       return parsed as AnchorInfo;
     }
@@ -480,7 +749,83 @@ export function restoreSelectionFromPosition(
       }
     }
     
-    // Second, try to find an existing highlight mark by matching text
+    // Second, try token-based restoration (Version 3) - most reliable for new articles
+    if (isTokenBasedFormat(position) && parsedPos && 'tokenIds' in parsedPos) {
+      const tokenPosition = parsedPos as TokenBasedPosition;
+      const tokenIds = tokenPosition.tokenIds;
+      
+      if (tokenIds && tokenIds.length > 0) {
+        // Find all token spans by their IDs
+        const tokenSpans: HTMLElement[] = [];
+        let allFound = true;
+        
+        for (const tokenId of tokenIds) {
+          const span = document.getElementById(tokenId);
+          if (span && span.id.startsWith('ritl-w-')) {
+            tokenSpans.push(span);
+          } else {
+            allFound = false;
+            break;
+          }
+        }
+        
+        if (allFound && tokenSpans.length > 0) {
+          // Optional: validate that the text still matches
+          const actualText = tokenSpans.map(span => span.textContent || '').join('');
+          if (normalizeText(actualText) !== normalizeText(tokenPosition.text)) {
+            console.warn('Token text mismatch, but restoring anyway:', {
+              expected: tokenPosition.text,
+              actual: actualText
+            });
+          }
+          
+          // Create range from first to last span
+          const firstSpan = tokenSpans[0];
+          const lastSpan = tokenSpans[tokenSpans.length - 1];
+          
+          const range = document.createRange();
+          
+          // Set start to the beginning of the first span
+          if (firstSpan.firstChild) {
+            if (firstSpan.firstChild.nodeType === Node.TEXT_NODE) {
+              range.setStart(firstSpan.firstChild, 0);
+            } else {
+              range.setStartBefore(firstSpan.firstChild);
+            }
+          } else {
+            range.setStartBefore(firstSpan);
+          }
+          
+          // Set end to the end of the last span
+          if (lastSpan.lastChild) {
+            if (lastSpan.lastChild.nodeType === Node.TEXT_NODE) {
+              const textNode = lastSpan.lastChild as Text;
+              range.setEnd(textNode, textNode.length);
+            } else {
+              range.setEndAfter(lastSpan.lastChild);
+            }
+          } else {
+            range.setEndAfter(lastSpan);
+          }
+          
+          // Scroll to the range
+          const rect = range.getBoundingClientRect();
+          if (rect.height > 0) {
+            firstSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          
+          // Apply selection
+          const selection = window.getSelection();
+          if (selection) {
+            selection.removeAllRanges();
+            selection.addRange(range);
+            return true;
+          }
+        }
+      }
+    }
+    
+    // Third, try to find an existing highlight mark by matching text
     const allMarks = container.querySelectorAll('mark[data-highlight-id]');
     for (const mark of Array.from(allMarks)) {
       const markText = mark.textContent || '';
@@ -506,7 +851,7 @@ export function restoreSelectionFromPosition(
       }
     }
     
-    // Third, try anchor-based restoration (Version 2)
+    // Fourth, try anchor-based restoration (Version 2)
     if (isAnchorFormat(position) && parsedPos && 'startAnchor' in parsedPos) {
       const anchorInfo = parsedPos as AnchorInfo;
       const root = findArticleRoot(container);
@@ -531,7 +876,7 @@ export function restoreSelectionFromPosition(
       }
     }
     
-    // Fourth, fallback to legacy XPath-based search
+    // Fifth, fallback to legacy XPath-based search
     if (parsedPos && 'xpath' in parsedPos && parsedPos.xpath) {
       const element = findElementByXPath(parsedPos.xpath, container);
       
@@ -620,9 +965,11 @@ export function getToolbarPosition(range: Range, container?: HTMLElement | null)
     const parentRect = positionedParent?.getBoundingClientRect() || { top: 0, left: 0 };
     
     // Calculate position relative to the positioned parent
-    // Position at top right of selection by default
-    const relativeTop = rect.top - parentRect.top - 8; // 8px above selection
-    const relativeLeft = rect.right - parentRect.left + 8; // Right edge of selection + 8px offset
+    // Position above the selection, centered horizontally
+    // Use a larger offset to ensure toolbar doesn't cover content (approximately toolbar height + padding)
+    const relativeTop = rect.top - parentRect.top - 60; // Position well above selection to avoid covering content
+    const selectionCenter = rect.left + (rect.width / 2); // Center of selection
+    const relativeLeft = selectionCenter - parentRect.left; // Center relative to parent
     
     return {
       top: relativeTop,

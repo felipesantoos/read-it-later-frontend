@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { themeStyles } from '../../utils/themeStyles';
 import type { Theme } from '../../utils/themeStyles';
-import { captureSelectionInfo, getToolbarPosition, type SelectionInfo } from '../../utils/highlightUtils';
+import { captureSelectionInfo, getToolbarPosition, type SelectionInfo, hasTokenSpans, expandSelectionToTokens } from '../../utils/highlightUtils';
 import Button from '../Button';
 import { Sparkles, MessageSquare } from 'lucide-react';
 
@@ -27,15 +27,10 @@ export default function HighlightToolbar({
   const [noteContent, setNoteContent] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const toolbarRef = useRef<HTMLDivElement>(null);
-  const mousePositionRef = useRef<{ x: number; y: number } | null>(null);
+  const capturedSelectionTextRef = useRef<string | null>(null);
   const currentTheme = themeStyles[theme];
 
   useEffect(() => {
-    // Track mouse position during selection
-    const handleMouseMove = (e: MouseEvent) => {
-      mousePositionRef.current = { x: e.clientX, y: e.clientY };
-    };
-
     const handleSelection = () => {
       // Don't hide if note input is showing
       if (showNoteInput) return;
@@ -45,15 +40,40 @@ export default function HighlightToolbar({
         setIsVisible(false);
         setShowNoteInput(false);
         setNoteContent('');
-        mousePositionRef.current = null;
+        capturedSelectionTextRef.current = null;
         return;
       }
 
       // Check if selection is within content area
       if (contentRef.current && !contentRef.current.contains(selection.anchorNode)) {
         setIsVisible(false);
-        mousePositionRef.current = null;
+        capturedSelectionTextRef.current = null;
         return;
+      }
+
+      // If toolbar is already visible, don't update position unless selection text changed
+      if (isVisible && capturedSelectionTextRef.current) {
+        const currentText = selection.toString().trim();
+        const capturedText = capturedSelectionTextRef.current.trim();
+        // Normalize whitespace for comparison
+        if (currentText.replace(/\s+/g, ' ') === capturedText.replace(/\s+/g, ' ')) {
+          // Selection hasn't changed, don't update position
+          return;
+        }
+      }
+
+      // Check if content has token spans and validate selection
+      const range = selection.getRangeAt(0);
+      const ancestorContainer = range.commonAncestorContainer;
+      
+      if (hasTokenSpans(ancestorContainer)) {
+        // For articles with token spans, ensure selection covers complete tokens
+        const expandedRange = expandSelectionToTokens(range);
+        if (expandedRange) {
+          // Update selection to expanded range (complete tokens only)
+          selection.removeAllRanges();
+          selection.addRange(expandedRange);
+        }
       }
 
       const info = captureSelectionInfo();
@@ -69,31 +89,23 @@ export default function HighlightToolbar({
         return;
       }
 
-      // Use mouse position if available, otherwise fall back to selection position
-      let toolbarPos: { top: number; left: number };
-      
-      if (mousePositionRef.current) {
-        const containerRect = container.getBoundingClientRect();
-        toolbarPos = {
-          top: mousePositionRef.current.y - containerRect.top - 8, // 8px above mouse
-          left: mousePositionRef.current.x - containerRect.left + 8, // 8px to the right of mouse
-        };
-      } else {
-        // Fallback to selection-based positioning
-        const pos = getToolbarPosition(info.range, container);
-        if (!pos) {
-          setIsVisible(false);
-          return;
-        }
-        toolbarPos = pos;
+      // Capture selection text when toolbar first appears
+      if (!isVisible) {
+        capturedSelectionTextRef.current = info.text;
+      }
+
+      // Always use selection-based positioning (never use mouse position)
+      const pos = getToolbarPosition(info.range, container);
+      if (!pos) {
+        setIsVisible(false);
+        return;
       }
 
       setSelectionInfo(info);
-      setPosition(toolbarPos);
+      setPosition(pos);
       setIsVisible(true);
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('selectionchange', handleSelection);
 
     const handleClick = (e: MouseEvent) => {
@@ -104,6 +116,7 @@ export default function HighlightToolbar({
           setIsVisible(false);
           setShowNoteInput(false);
           setNoteContent('');
+          capturedSelectionTextRef.current = null;
         } else if (showNoteInput) {
           // If note input is showing and clicking outside, just close the input but keep toolbar
           setShowNoteInput(false);
@@ -115,7 +128,6 @@ export default function HighlightToolbar({
     document.addEventListener('mousedown', handleClick);
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('selectionchange', handleSelection);
       document.removeEventListener('mousedown', handleClick);
     };
@@ -144,40 +156,57 @@ export default function HighlightToolbar({
       let adjustedTop = position.top;
 
       // Adjust horizontal position if toolbar goes off screen
+      // Since toolbar is centered with transform: translateX(-50%), we need to check both edges
+      const toolbarHalfWidth = toolbarRect.width / 2;
+      
       if (toolbarRect.right > viewportWidth - 16) {
-        // Move to left side of mouse position
-        if (mousePositionRef.current) {
-          adjustedLeft = mousePositionRef.current.x - containerRect.left - toolbarRect.width - 8;
-        } else {
-          adjustedLeft = containerRect.width - toolbarRect.width - 16;
-        }
-        // Ensure minimum left padding
-        if (adjustedLeft < 16) {
-          adjustedLeft = 16;
-        }
+        // Toolbar goes off right edge, adjust to keep it on screen
+        adjustedLeft = Math.min(containerRect.width - toolbarHalfWidth - 16, position.left);
       }
-      // If toolbar goes off left edge, align to left with padding
+      // If toolbar goes off left edge, adjust to keep it on screen
       if (toolbarRect.left < containerRect.left + 16) {
-        adjustedLeft = 16;
+        adjustedLeft = Math.max(toolbarHalfWidth + 16, position.left);
       }
 
       // Adjust vertical position if toolbar goes off screen
       const toolbarHeight = toolbarRect.height;
       
-      // If toolbar goes off bottom, move it above the mouse
-      if (toolbarRect.bottom > viewportHeight - 16) {
-        if (mousePositionRef.current) {
-          adjustedTop = mousePositionRef.current.y - containerRect.top - toolbarHeight - 8;
-        } else {
-          adjustedTop = Math.max(8, viewportHeight - containerRect.top - toolbarHeight - 16);
-        }
+      // Get the selection rect to position toolbar above it
+      const selection = window.getSelection();
+      let selectionRect: DOMRect | null = null;
+      if (selection && selection.rangeCount > 0) {
+        selectionRect = selection.getRangeAt(0).getBoundingClientRect();
       }
-      // If toolbar goes off top, move it below the mouse
+      
+      // If toolbar goes off top of viewport, position it just above the selection
       if (toolbarRect.top < containerRect.top + 16) {
-        if (mousePositionRef.current) {
-          adjustedTop = mousePositionRef.current.y - containerRect.top + 8;
+        if (selectionRect) {
+          // Position toolbar just above the selection (8px gap)
+          adjustedTop = selectionRect.top - containerRect.top - toolbarHeight - 8;
+          // Ensure it doesn't go below the selection
+          if (adjustedTop > selectionRect.top - containerRect.top) {
+            adjustedTop = selectionRect.top - containerRect.top - toolbarHeight - 8;
+          }
+          // Ensure minimum top padding
+          if (adjustedTop < 16) {
+            adjustedTop = 16;
+          }
         } else {
           adjustedTop = 16;
+        }
+      }
+      
+      // If toolbar goes off bottom, move it up but keep it above selection if possible
+      if (toolbarRect.bottom > viewportHeight - 16) {
+        if (selectionRect) {
+          // Try to position above selection
+          adjustedTop = selectionRect.top - containerRect.top - toolbarHeight - 8;
+          // If that's still off screen, position at top of viewport
+          if (adjustedTop < 16) {
+            adjustedTop = Math.max(8, viewportHeight - containerRect.top - toolbarHeight - 16);
+          }
+        } else {
+          adjustedTop = Math.max(8, viewportHeight - containerRect.top - toolbarHeight - 16);
         }
       }
 
@@ -198,6 +227,7 @@ export default function HighlightToolbar({
       setIsVisible(false);
       setShowNoteInput(false);
       setNoteContent('');
+      capturedSelectionTextRef.current = null;
     } catch (error) {
       console.error('Error creating highlight:', error);
     } finally {
@@ -215,6 +245,7 @@ export default function HighlightToolbar({
       setIsVisible(false);
       setShowNoteInput(false);
       setNoteContent('');
+      capturedSelectionTextRef.current = null;
     } catch (error) {
       console.error('Error creating highlight with note:', error);
     } finally {
@@ -246,6 +277,7 @@ export default function HighlightToolbar({
         position: 'absolute',
         top: `${position.top}px`,
         left: `${position.left}px`,
+        transform: 'translateX(-50%)', // Center horizontally
         backgroundColor: currentTheme.cardBg,
         border: `1px solid ${currentTheme.cardBorder}`,
         borderRadius: '8px',
