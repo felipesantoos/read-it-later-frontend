@@ -4,6 +4,7 @@ import { highlightsApi, type Highlight } from '../api/highlights';
 import Toast from '../components/Toast';
 import { themeStyles } from '../utils/themeStyles';
 import { useTheme } from '../contexts/ThemeContext';
+import { extractTextFromHtml } from '../utils/textUtils';
 import Button from '../components/Button';
 import { Sparkles, RefreshCw, Moon, ScrollText, Sun, Inbox, BookOpen, BarChart, MessageSquare } from 'lucide-react';
 import '../App.css';
@@ -42,9 +43,10 @@ export default function HighlightsWidget() {
   const filteredHighlights = highlights.filter((highlight) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
+    const articleTitle = extractTextFromHtml(highlight.article.title);
     return (
       highlight.text.toLowerCase().includes(query) ||
-      highlight.article.title?.toLowerCase().includes(query) ||
+      articleTitle.toLowerCase().includes(query) ||
       highlight.notes.some(note => note.content.toLowerCase().includes(query))
     );
   });
@@ -133,7 +135,7 @@ export default function HighlightsWidget() {
             >
               <div style={{ marginBottom: '0.5rem' }}>
                 <p style={{ fontSize: '0.8rem', color: currentTheme.secondaryText, margin: 0 }}>
-                  {highlight.article.title || highlight.article.url}
+                  {extractTextFromHtml(highlight.article.title) || highlight.article.url}
                 </p>
               </div>
               <p style={{ fontSize: '0.9rem', margin: '0.5rem 0', fontStyle: 'italic', color: currentTheme.text }}>

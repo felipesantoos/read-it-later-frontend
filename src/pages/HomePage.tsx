@@ -3,6 +3,7 @@ import { articlesApi } from '../api/articles';
 import Button from '../components/Button';
 import { useTheme } from '../contexts/ThemeContext';
 import { themeStyles } from '../utils/themeStyles';
+import { extractTextFromHtml } from '../utils/textUtils';
 import { Inbox, Copy, BookOpen, Star, Sparkles, BarChart } from 'lucide-react';
 import '../App.css';
 
@@ -49,7 +50,7 @@ export default function HomePage() {
         
         setCurrentReading(
           sortedArticles.map(article => ({
-            title: article.title || article.url,
+            title: extractTextFromHtml(article.title) || article.url,
             id: article.id,
           }))
         );

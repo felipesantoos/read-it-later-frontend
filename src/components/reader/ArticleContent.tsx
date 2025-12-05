@@ -270,15 +270,18 @@ export default function ArticleContent({ article, contentRef, theme, fontSize, l
       <div style={{ 
         marginBottom: '2rem'
       }}>
-        <h1 style={{ 
-          fontSize: `${fontSize * 1.5}px`, 
-          fontWeight: 600, 
-          marginBottom: '0.75rem', 
-          lineHeight: 1.3, 
-          color: currentTheme.text 
-        }}>
-          {article.title || article.url}
-        </h1>
+        <h1 
+          style={{ 
+            fontSize: `${fontSize * 1.5}px`, 
+            fontWeight: 600, 
+            marginBottom: '0.75rem', 
+            lineHeight: 1.3, 
+            color: currentTheme.text 
+          }}
+          dangerouslySetInnerHTML={{ 
+            __html: article.title || article.url 
+          }}
+        />
         {article.description && (
           <p style={{ 
             fontSize: `${fontSize * 0.9}px`, 
