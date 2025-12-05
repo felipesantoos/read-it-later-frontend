@@ -2,6 +2,8 @@ import StatusDropdown from './StatusDropdown';
 import type { Article } from '../../api/articles';
 import type { Theme } from '../../utils/themeStyles';
 import { themeStyles } from '../../utils/themeStyles';
+import Button from '../Button';
+import { Sparkles } from 'lucide-react';
 
 interface ReadingControlsProps {
   article: Article;
@@ -104,13 +106,14 @@ export default function ReadingControls({
         theme={theme}
       />
       {selectedText && (
-        <button
-          className="primary"
+        <Button
+          variant="primary"
+          size="sm"
+          icon={<Sparkles size={14} />}
           onClick={onCreateHighlight}
-          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
         >
-          ✨ Highlight
-        </button>
+          Highlight
+        </Button>
       )}
     </div>
   );

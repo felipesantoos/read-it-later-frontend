@@ -3,6 +3,8 @@ import { collectionsApi, type Collection } from '../api/collections';
 import Toast from './Toast';
 import type { Theme } from '../utils/themeStyles';
 import { themeStyles } from '../utils/themeStyles';
+import Button from './Button';
+import { Folder, Plus, X } from 'lucide-react';
 import '../App.css';
 
 interface CollectionsManagerProps {
@@ -101,10 +103,10 @@ export default function CollectionsManager({ articleId, currentCollections = [],
       await collectionsApi.create({ name: newCollectionName.trim() });
       setNewCollectionName('');
       await loadCollections();
-      setMessage({ text: 'Coleção criada!', type: 'success' });
+      setMessage({ text: 'Collection created!', type: 'success' });
     } catch (error) {
       console.error('Error creating collection:', error);
-      setMessage({ text: 'Erro ao criar coleção', type: 'error' });
+      setMessage({ text: 'Error creating collection', type: 'error' });
     }
   }
 
@@ -128,10 +130,10 @@ export default function CollectionsManager({ articleId, currentCollections = [],
       
       onUpdate?.();
       setShowPopover(false);
-      setMessage({ text: 'Coleções atualizadas', type: 'success' });
+      setMessage({ text: 'Collections updated', type: 'success' });
     } catch (error) {
       console.error('Error applying collections:', error);
-      setMessage({ text: 'Erro ao atualizar coleções', type: 'error' });
+      setMessage({ text: 'Error updating collections', type: 'error' });
     }
   }
 
@@ -159,23 +161,23 @@ export default function CollectionsManager({ articleId, currentCollections = [],
         await collectionsApi.addArticle(collectionId, articleId);
       }
       onUpdate?.();
-      setMessage({ text: isAssigned ? 'Removido da coleção' : 'Adicionado à coleção', type: 'success' });
+      setMessage({ text: isAssigned ? 'Removed from collection' : 'Added to collection', type: 'success' });
     } catch (error) {
       console.error('Error toggling collection:', error);
-      setMessage({ text: 'Erro ao atualizar coleção', type: 'error' });
+      setMessage({ text: 'Error updating collection', type: 'error' });
     }
   }
 
   async function handleDeleteCollection(collectionId: string) {
-    if (!confirm('Tem certeza que deseja deletar esta coleção?')) return;
+    if (!confirm('Are you sure you want to delete this collection?')) return;
 
     try {
       await collectionsApi.delete(collectionId);
       await loadCollections();
-      setMessage({ text: 'Coleção deletada', type: 'success' });
+      setMessage({ text: 'Collection deleted', type: 'success' });
     } catch (error) {
       console.error('Error deleting collection:', error);
-      setMessage({ text: 'Erro ao deletar coleção', type: 'error' });
+      setMessage({ text: 'Error deleting collection', type: 'error' });
     }
   }
 
@@ -198,20 +200,18 @@ export default function CollectionsManager({ articleId, currentCollections = [],
           />
         )}
         <div style={{ position: 'relative' }} data-popover-container>
-          <button
+          <Button
             ref={buttonRef}
+            variant="ghost"
+            size="sm"
             onClick={() => setShowPopover(!showPopover)}
+            title="Manage collections"
             style={{
-              padding: '0.25rem 0.5rem',
-              fontSize: '0.75rem',
+              position: 'relative',
               backgroundColor: currentTheme.buttonBg,
               border: `1px solid ${currentTheme.cardBorder}`,
-              borderRadius: '4px',
-              cursor: 'pointer',
               color: currentTheme.text,
-              position: 'relative',
             }}
-            title="Gerenciar coleções"
           >
             Collections
             {currentCollections.length > 0 && (
@@ -234,7 +234,7 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                 {currentCollections.length}
               </span>
             )}
-          </button>
+          </Button>
           {showPopover && popoverPosition && (
             <>
               <div
@@ -272,7 +272,7 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                 <div style={{ padding: '0.5rem', borderBottom: `1px solid ${currentTheme.cardBorder}` }}>
                   <input
                     type="text"
-                    placeholder="Buscar coleções..."
+                    placeholder="Search collections..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     style={{
@@ -292,7 +292,7 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                 <div style={{ padding: '0.5rem', borderBottom: `1px solid ${currentTheme.cardBorder}`, display: 'flex', gap: '0.25rem' }}>
                   <input
                     type="text"
-                    placeholder="Nova coleção..."
+                    placeholder="New collection..."
                     value={newCollectionName}
                     onChange={(e) => setNewCollectionName(e.target.value)}
                     onKeyPress={(e) => {
@@ -310,23 +310,20 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                       color: currentTheme.text,
                     }}
                   />
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={handleCreateCollection}
                     disabled={!newCollectionName.trim()}
                     style={{
-                      padding: '0.25rem 0.5rem',
-                      fontSize: '0.75rem',
                       whiteSpace: 'nowrap',
                       backgroundColor: currentTheme.buttonBg,
-                      color: currentTheme.text,
                       border: `1px solid ${currentTheme.cardBorder}`,
-                      borderRadius: '4px',
-                      cursor: newCollectionName.trim() ? 'pointer' : 'not-allowed',
-                      opacity: newCollectionName.trim() ? 1 : 0.5,
+                      color: currentTheme.text,
                     }}
                   >
-                    Criar
-                  </button>
+                    Create
+                  </Button>
                 </div>
 
                 {/* Collections list */}
@@ -337,10 +334,10 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                   maxHeight: '250px',
                 }}>
                   {loading ? (
-                    <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, textAlign: 'center' }}>Carregando...</p>
+                    <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, textAlign: 'center' }}>Loading...</p>
                   ) : filteredCollections.length === 0 ? (
                     <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, textAlign: 'center' }}>
-                      {searchQuery ? 'Nenhuma coleção encontrada' : 'Nenhuma coleção ainda'}
+                      {searchQuery ? 'No collections found' : 'No collections yet'}
                     </p>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
@@ -367,24 +364,20 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                               onClick={(e) => e.stopPropagation()}
                               style={{ cursor: 'pointer', width: '16px', height: '16px', flexShrink: 0 }}
                             />
-                            <span style={{ fontSize: '0.75rem', flex: 1, color: currentTheme.text }}>📁 {collection.name}</span>
-                            <button
+                            <span style={{ fontSize: '0.75rem', flex: 1, color: currentTheme.text, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <Folder size={14} /> {collection.name}
+                            </span>
+                            <Button
+                              variant="icon"
+                              size="sm"
+                              icon={<X size={14} />}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteCollection(collection.id);
                               }}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                color: '#dc3545',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                padding: '0 0.25rem',
-                              }}
-                              title="Deletar coleção"
-                            >
-                              ×
-                            </button>
+                              title="Delete collection"
+                              style={{ color: '#dc3545', padding: '0 0.25rem' }}
+                            />
                           </div>
                         );
                       })}
@@ -400,7 +393,9 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                   gap: '0.5rem',
                   justifyContent: 'flex-end',
                 }}>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       setShowPopover(false);
                       setSearchQuery('');
@@ -408,31 +403,20 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                       setSelectedCollectionIds(assignedIds);
                     }}
                     style={{
-                      padding: '0.25rem 0.75rem',
-                      fontSize: '0.75rem',
                       backgroundColor: currentTheme.buttonBg,
-                      color: currentTheme.text,
                       border: `1px solid ${currentTheme.cardBorder}`,
-                      borderRadius: '4px',
-                      cursor: 'pointer',
+                      color: currentTheme.text,
                     }}
                   >
-                    Cancelar
-                  </button>
-                  <button
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
                     onClick={handleApplyCollections}
-                    style={{
-                      padding: '0.25rem 0.75rem',
-                      fontSize: '0.75rem',
-                      backgroundColor: '#007bff',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                    }}
                   >
-                    Aplicar
-                  </button>
+                    Apply
+                  </Button>
                 </div>
               </div>
             </>
@@ -457,9 +441,9 @@ export default function CollectionsManager({ articleId, currentCollections = [],
       <div className="card" style={{ padding: '0.5rem', flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
         {/* Assigned collections display */}
         <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '0.25rem', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 500, marginRight: '0.25rem' }}>Coleções:</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 500, marginRight: '0.25rem' }}>Collections:</span>
           {currentCollections.length === 0 ? (
-            <span style={{ fontSize: '0.75rem', color: '#666' }}>Nenhuma coleção atribuída</span>
+            <span style={{ fontSize: '0.75rem', color: '#666' }}>No collections assigned</span>
           ) : (
             <>
               {currentCollections.map((ac) => {
@@ -480,30 +464,32 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                       whiteSpace: 'nowrap',
                     }}
                     onClick={() => handleToggleCollection(collection.id)}
-                    title="Clique para remover"
+                    title="Click to remove"
                   >
-                    <span>📁 {collection.name}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <Folder size={14} /> {collection.name}
+                    </span>
                   </div>
                 );
               })}
             </>
           )}
           <div style={{ position: 'relative' }} data-popover-container>
-            <button
+            <Button
               ref={buttonRef}
+              variant="icon"
+              size="sm"
+              icon={<Plus size={14} />}
               onClick={() => setShowPopover(!showPopover)}
+              title="Add collection"
               style={{
                 padding: '0.25rem 0.5rem',
                 fontSize: '0.75rem',
-                backgroundColor: '#e9ecef',
-                border: '1px solid #dee2e6',
-                borderRadius: '4px',
-                cursor: 'pointer',
+                backgroundColor: currentTheme.buttonBg,
+                border: `1px solid ${currentTheme.cardBorder}`,
+                color: currentTheme.text,
               }}
-              title="Adicionar coleção"
-            >
-              +
-            </button>
+            />
 
             {/* Popover */}
             {showPopover && popoverPosition && (
@@ -543,7 +529,7 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                 <div style={{ padding: '0.5rem', borderBottom: `1px solid ${currentTheme.cardBorder}` }}>
                   <input
                     type="text"
-                    placeholder="Buscar coleções..."
+                    placeholder="Search collections..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     style={{
@@ -563,7 +549,7 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                 <div style={{ padding: '0.5rem', borderBottom: `1px solid ${currentTheme.cardBorder}`, display: 'flex', gap: '0.25rem' }}>
                   <input
                     type="text"
-                    placeholder="Nova coleção..."
+                    placeholder="New collection..."
                     value={newCollectionName}
                     onChange={(e) => setNewCollectionName(e.target.value)}
                     onKeyPress={(e) => {
@@ -581,23 +567,20 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                       color: currentTheme.text,
                     }}
                   />
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={handleCreateCollection}
                     disabled={!newCollectionName.trim()}
                     style={{
-                      padding: '0.25rem 0.5rem',
-                      fontSize: '0.75rem',
                       whiteSpace: 'nowrap',
                       backgroundColor: currentTheme.buttonBg,
-                      color: currentTheme.text,
                       border: `1px solid ${currentTheme.cardBorder}`,
-                      borderRadius: '4px',
-                      cursor: newCollectionName.trim() ? 'pointer' : 'not-allowed',
-                      opacity: newCollectionName.trim() ? 1 : 0.5,
+                      color: currentTheme.text,
                     }}
                   >
-                    Criar
-                  </button>
+                    Create
+                  </Button>
                 </div>
 
                 {/* Collections list */}
@@ -608,10 +591,10 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                   maxHeight: '250px',
                 }}>
                   {loading ? (
-                    <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, textAlign: 'center' }}>Carregando...</p>
+                    <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, textAlign: 'center' }}>Loading...</p>
                   ) : filteredCollections.length === 0 ? (
                     <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, textAlign: 'center' }}>
-                      {searchQuery ? 'Nenhuma coleção encontrada' : 'Nenhuma coleção ainda'}
+                      {searchQuery ? 'No collections found' : 'No collections yet'}
                     </p>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
@@ -638,24 +621,20 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                               onClick={(e) => e.stopPropagation()}
                               style={{ cursor: 'pointer', width: '16px', height: '16px', flexShrink: 0 }}
                             />
-                            <span style={{ fontSize: '0.75rem', flex: 1, color: currentTheme.text }}>📁 {collection.name}</span>
-                            <button
+                            <span style={{ fontSize: '0.75rem', flex: 1, color: currentTheme.text, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <Folder size={14} /> {collection.name}
+                            </span>
+                            <Button
+                              variant="icon"
+                              size="sm"
+                              icon={<X size={14} />}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteCollection(collection.id);
                               }}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                color: '#dc3545',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                padding: '0 0.25rem',
-                              }}
-                              title="Deletar coleção"
-                            >
-                              ×
-                            </button>
+                              title="Delete collection"
+                              style={{ color: '#dc3545', padding: '0 0.25rem' }}
+                            />
                           </div>
                         );
                       })}
@@ -671,7 +650,9 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                   gap: '0.5rem',
                   justifyContent: 'flex-end',
                 }}>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       setShowPopover(false);
                       setSearchQuery('');
@@ -679,31 +660,20 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                       setSelectedCollectionIds(assignedIds);
                     }}
                     style={{
-                      padding: '0.25rem 0.75rem',
-                      fontSize: '0.75rem',
                       backgroundColor: currentTheme.buttonBg,
-                      color: currentTheme.text,
                       border: `1px solid ${currentTheme.cardBorder}`,
-                      borderRadius: '4px',
-                      cursor: 'pointer',
+                      color: currentTheme.text,
                     }}
                   >
-                    Cancelar
-                  </button>
-                  <button
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
                     onClick={handleApplyCollections}
-                    style={{
-                      padding: '0.25rem 0.75rem',
-                      fontSize: '0.75rem',
-                      backgroundColor: '#007bff',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                    }}
                   >
-                    Aplicar
-                  </button>
+                    Apply
+                  </Button>
                 </div>
                 </div>
               </>

@@ -12,6 +12,8 @@ import TTSControls from './TTSControls';
 import type { Highlight } from '../../api/highlights';
 import type { MutableRefObject, RefObject } from 'react';
 import type { UseTTSReturn } from '../../hooks/useTTS';
+import Button from '../Button';
+import { ArrowLeft, Moon, ScrollText, Sun, ExternalLink, Pencil, Plus, RotateCw, X, Check, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 
 interface ReaderHeaderProps {
   article: Article;
@@ -124,17 +126,15 @@ export default function ReaderHeader({
 
   return (
     <div className="flex-between mb-1" style={{ alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-      <button 
-        onClick={() => navigate('/inbox')} 
-        style={{ 
-          padding: '0.25rem 0.5rem', 
-          fontSize: '0.75rem',
-          backgroundColor: currentTheme.buttonBg,
-          color: currentTheme.text
-        }}
+      <Button
+        variant="ghost"
+        size="sm"
+        icon={<ArrowLeft size={14} />}
+        onClick={() => navigate('/inbox')}
+        style={{ color: currentTheme.text }}
       >
-        ← Voltar
-      </button>
+        Back
+      </Button>
       <div className="flex gap-1" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
         {/* Page Tracker - Compact */}
         {isEditingPages ? (
@@ -145,7 +145,7 @@ export default function ReaderHeader({
               max={editingTotalPages ? parseInt(editingTotalPages) : undefined}
               value={editingCurrentPage}
               onChange={(e) => setEditingCurrentPage(e.target.value)}
-              placeholder="Atual"
+              placeholder="Current"
               style={{
                 width: '50px',
                 padding: '0.15rem 0.2rem',
@@ -172,38 +172,27 @@ export default function ReaderHeader({
                 borderRadius: '3px'
               }}
             />
-            <button
+            <Button
+              variant="primary"
+              size="sm"
+              icon={<Check size={12} />}
               onClick={handleSavePages}
-              style={{
-                padding: '0.15rem 0.3rem',
-                fontSize: '0.7rem',
-                backgroundColor: '#007bff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '3px',
-                cursor: 'pointer'
-              }}
-            >
-              ✓
-            </button>
-            <button
+              style={{ padding: '0.15rem 0.3rem', fontSize: '0.7rem' }}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<X size={12} />}
               onClick={handleCancelEditingPages}
-              style={{
-                padding: '0.15rem 0.3rem',
-                fontSize: '0.7rem',
-                backgroundColor: currentTheme.buttonBg,
-                color: currentTheme.text,
-                border: 'none',
-                borderRadius: '3px',
-                cursor: 'pointer'
-              }}
-            >
-              ✕
-            </button>
+              style={{ padding: '0.15rem 0.3rem', fontSize: '0.7rem', color: currentTheme.text }}
+            />
           </div>
         ) : article.totalPages && article.totalPages > 0 ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<ChevronLeft size={14} />}
               onClick={() => {
                 const currentPage = article.currentPage ?? 0;
                 if (currentPage > 0) {
@@ -211,20 +200,9 @@ export default function ReaderHeader({
                 }
               }}
               disabled={(article.currentPage ?? 0) === 0}
-              style={{
-                padding: '0.15rem 0.3rem',
-                fontSize: '0.7rem',
-                opacity: (article.currentPage ?? 0) === 0 ? 0.5 : 1,
-                cursor: (article.currentPage ?? 0) === 0 ? 'not-allowed' : 'pointer',
-                backgroundColor: currentTheme.buttonBg,
-                color: currentTheme.text,
-                border: 'none',
-                borderRadius: '3px'
-              }}
-              title="Página anterior"
-            >
-              ←
-            </button>
+              title="Previous page"
+              style={{ padding: '0.15rem 0.3rem', fontSize: '0.7rem', color: currentTheme.text }}
+            />
             <input
               type="number"
               min="0"
@@ -250,7 +228,10 @@ export default function ReaderHeader({
             <span style={{ fontSize: '0.7rem', color: currentTheme.secondaryText }}>
               / {article.totalPages}
             </span>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<ChevronRight size={14} />}
               onClick={() => {
                 const currentPage = article.currentPage ?? 0;
                 if (currentPage < article.totalPages!) {
@@ -258,52 +239,29 @@ export default function ReaderHeader({
                 }
               }}
               disabled={(article.currentPage ?? 0) >= article.totalPages!}
-              style={{
-                padding: '0.15rem 0.3rem',
-                fontSize: '0.7rem',
-                opacity: (article.currentPage ?? 0) >= article.totalPages! ? 0.5 : 1,
-                cursor: (article.currentPage ?? 0) >= article.totalPages! ? 'not-allowed' : 'pointer',
-                backgroundColor: currentTheme.buttonBg,
-                color: currentTheme.text,
-                border: 'none',
-                borderRadius: '3px'
-              }}
-              title="Próxima página"
-            >
-              →
-            </button>
-            <button
+              title="Next page"
+              style={{ padding: '0.15rem 0.3rem', fontSize: '0.7rem', color: currentTheme.text }}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<Pencil size={12} />}
               onClick={handleStartEditingPages}
-              style={{
-                padding: '0.15rem 0.3rem',
-                fontSize: '0.7rem',
-                backgroundColor: currentTheme.buttonBg,
-                color: currentTheme.text,
-                border: 'none',
-                borderRadius: '3px',
-                cursor: 'pointer'
-              }}
-              title="Editar páginas"
-            >
-              ✏️
-            </button>
+              title="Edit pages"
+              style={{ padding: '0.15rem 0.3rem', fontSize: '0.7rem', color: currentTheme.text }}
+            />
           </div>
         ) : (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<Plus size={12} />}
             onClick={handleStartEditingPages}
-            style={{ 
-              padding: '0.15rem 0.3rem', 
-              fontSize: '0.7rem',
-              backgroundColor: currentTheme.buttonBg,
-              color: currentTheme.text,
-              border: 'none',
-              borderRadius: '3px',
-              cursor: 'pointer'
-            }}
-            title="Adicionar rastreamento de páginas"
+            title="Add page tracking"
+            style={{ color: currentTheme.text }}
           >
-            ➕ Páginas
-          </button>
+            Páginas
+          </Button>
         )}
 
         {/* Progress Bar - Compact */}
@@ -328,27 +286,20 @@ export default function ReaderHeader({
             <span style={{ fontSize: '0.7rem', color: currentTheme.secondaryText, minWidth: '35px' }}>
               {Math.round(readingProgress * 100)}%
             </span>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<RotateCw size={12} />}
               onClick={onResetProgress}
-              style={{
-                padding: '0.15rem 0.3rem',
-                fontSize: '0.7rem',
-                backgroundColor: currentTheme.buttonBg,
-                color: currentTheme.text,
-                border: 'none',
-                borderRadius: '3px',
-                cursor: 'pointer'
-              }}
-              title="Resetar progresso"
-            >
-              🔄
-            </button>
+              title="Reset progress"
+              style={{ padding: '0.15rem 0.3rem', fontSize: '0.7rem', color: currentTheme.text }}
+            />
           </div>
         )}
 
         {/* Font Size Input */}
         <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', color: currentTheme.text }}>
-          <span style={{ fontSize: '0.75rem' }}>Altura:</span>
+          <span style={{ fontSize: '0.75rem' }}>Height:</span>
           <input
             type="number"
             step="1"
@@ -386,7 +337,7 @@ export default function ReaderHeader({
         
         {/* Line Height Input */}
         <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', color: currentTheme.text }}>
-          <span style={{ fontSize: '0.75rem' }}>Linha:</span>
+          <span style={{ fontSize: '0.75rem' }}>Line:</span>
           <input
             type="number"
             step="0.1"
@@ -459,49 +410,37 @@ export default function ReaderHeader({
 
         {/* Refresh Button */}
         {onRefresh && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<RefreshCw size={14} />}
             onClick={onRefresh}
-            title="Atualizar"
-            style={{ padding: '0.25rem', fontSize: '0.75rem', minWidth: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: currentTheme.buttonBg, color: currentTheme.text }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
-              <path d="M21 3v5h-5"></path>
-              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
-              <path d="M3 21v-5h5"></path>
-            </svg>
-          </button>
+            title="Refresh"
+            style={{ color: currentTheme.text }}
+          />
         )}
 
         {/* Theme Button */}
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={theme === 'light' ? <Moon size={14} /> : theme === 'dark' ? <ScrollText size={14} /> : <Sun size={14} />}
           onClick={cycleTheme}
-          style={{ 
-            padding: '0.25rem 0.5rem', 
-            fontSize: '0.75rem',
-            backgroundColor: currentTheme.buttonBg,
-            color: currentTheme.text
-          }}
-          title="Alternar tema"
-        >
-          {theme === 'light' ? '🌙' : theme === 'dark' ? '📜' : '☀️'}
-        </button>
+          title="Toggle theme"
+          style={{ color: currentTheme.text }}
+        />
         
         {/* Original Link */}
-        <a
-          href={article.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ 
-            padding: '0.25rem 0.5rem', 
-            fontSize: '0.75rem', 
-            textDecoration: 'none', 
-            color: currentTheme.text 
-          }}
-          title="Abrir artigo original"
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<ExternalLink size={14} />}
+          onClick={() => window.open(article.url, '_blank', 'noopener,noreferrer')}
+          title="Open original article"
+          style={{ color: currentTheme.text, textDecoration: 'none' }}
         >
-          🔗 Original
-        </a>
+          Original
+        </Button>
       </div>
     </div>
   );

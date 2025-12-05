@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { articlesApi, type Article } from '../api/articles';
-import { statusColors, statusLabels, allStatuses } from '../constants/articleStatus';
+import { statusColors, statusLabels, allStatuses, getStatusTextColor } from '../constants/articleStatus';
+import Button from './Button';
+import { Heart, Archive, Trash2, Star, BookOpen, Check } from 'lucide-react';
 import '../App.css';
 
 interface ArticleCardProps {
@@ -44,7 +46,7 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
   };
 
   const handleDelete = async () => {
-    if (!confirm('Tem certeza que deseja deletar este artigo?')) return;
+    if (!confirm('Are you sure you want to delete this article?')) return;
     if (isUpdating) return;
     setIsUpdating(true);
     try {
@@ -120,7 +122,7 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
             </h3>
             <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', flexShrink: 0 }}>
               {article.isFavorited && (
-                <span style={{ fontSize: '0.8rem' }} title="Favorito">⭐</span>
+                <Star size={14} style={{ color: '#ffc107' }} title="Favorite" />
               )}
               <div ref={statusDropdownRef} style={{ position: 'relative' }}>
                 <span
@@ -134,7 +136,7 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
                     padding: '0.2rem 0.4rem',
                     borderRadius: '4px',
                     backgroundColor: statusColors[article.status],
-                    color: 'white',
+                    color: getStatusTextColor(statusColors[article.status]),
                     cursor: 'pointer',
                     userSelect: 'none',
                     display: 'inline-block',
@@ -216,7 +218,7 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
                         />
                         {statusLabels[status]}
                         {status === article.status && (
-                          <span style={{ marginLeft: '0.5rem', color: statusColors[status] }}>✓</span>
+                          <Check size={14} style={{ marginLeft: '0.5rem', color: statusColors[status] }} />
                         )}
                       </div>
                     ))}
@@ -240,7 +242,7 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
             )}
             {article.totalPages && article.totalPages > 0 ? (
               <span style={{ fontSize: '0.75rem', color: '#999' }}>
-                📄 {article.currentPage || 0}/{article.totalPages} páginas
+                📄 {article.currentPage || 0}/{article.totalPages} pages
                 {article.currentPage && article.totalPages && (
                   <span style={{ marginLeft: '0.25rem' }}>
                     ({Math.round(((article.currentPage || 0) / article.totalPages) * 100)}%)
@@ -248,8 +250,8 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
                 )}
               </span>
             ) : article.readingProgress > 0 && (
-              <span style={{ fontSize: '0.75rem', color: '#999' }}>
-                📖 {Math.round(article.readingProgress * 100)}%
+              <span style={{ fontSize: '0.75rem', color: '#999', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <BookOpen size={12} /> {Math.round(article.readingProgress * 100)}%
               </span>
             )}
           </div>
@@ -273,37 +275,46 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
             )}
           </div>
           <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.5rem' }}>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<Heart size={14} fill={article.isFavorited ? 'currentColor' : 'none'} />}
               onClick={(e) => {
                 e.stopPropagation();
                 handleToggleFavorite();
               }}
               disabled={isUpdating}
-              style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem' }}
-              title={article.isFavorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
-            >
-              {article.isFavorited ? '❤️' : '🤍'}
-            </button>
-            <button
+              title={article.isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+              style={{ 
+                fontSize: '0.7rem', 
+                padding: '0.25rem 0.5rem',
+                color: article.isFavorited ? '#dc3545' : 'inherit'
+              }}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<Archive size={14} />}
               onClick={(e) => {
                 e.stopPropagation();
                 handleStatusChange(article.status === 'ARCHIVED' ? 'UNREAD' : 'ARCHIVED');
               }}
               disabled={isUpdating}
+              title={article.status === 'ARCHIVED' ? 'Desarquivar' : 'Arquivar'}
               style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem' }}
-            >
-              📦
-            </button>
-            <button
+            />
+            <Button
+              variant="danger"
+              size="sm"
+              icon={<Trash2 size={14} />}
               onClick={(e) => {
                 e.stopPropagation();
                 handleDelete();
               }}
               disabled={isUpdating}
-              style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem', backgroundColor: '#dc3545', color: 'white' }}
-            >
-              🗑️
-            </button>
+              title="Delete article"
+              style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem' }}
+            />
           </div>
         </div>
       </div>

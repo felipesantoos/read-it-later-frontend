@@ -1,8 +1,9 @@
 import { useRef, useEffect, useState } from 'react';
 import type { Article } from '../../api/articles';
-import { statusColors, statusLabels, allStatuses } from '../../constants/articleStatus';
+import { statusColors, statusLabels, allStatuses, getStatusTextColor } from '../../constants/articleStatus';
 import type { Theme } from '../../utils/themeStyles';
 import { themeStyles } from '../../utils/themeStyles';
+import { Check } from 'lucide-react';
 
 interface StatusDropdownProps {
   article: Article;
@@ -64,7 +65,7 @@ export default function StatusDropdown({ article, isOpen, onToggle, onChange, is
           padding: '0.25rem 0.5rem',
           borderRadius: '4px',
           backgroundColor: statusColors[article.status],
-          color: 'white',
+          color: getStatusTextColor(statusColors[article.status]),
           cursor: isUpdating ? 'wait' : 'pointer',
           userSelect: 'none',
           display: 'inline-block',
@@ -148,7 +149,7 @@ export default function StatusDropdown({ article, isOpen, onToggle, onChange, is
               />
               {statusLabels[status]}
               {status === article.status && (
-                <span style={{ marginLeft: '0.5rem', color: statusColors[status] }}>✓</span>
+                <Check size={14} style={{ marginLeft: '0.5rem', color: statusColors[status] }} />
               )}
             </div>
           ))}

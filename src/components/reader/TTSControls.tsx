@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import type { Theme } from '../../utils/themeStyles';
 import { themeStyles } from '../../utils/themeStyles';
 import type { UseTTSReturn } from '../../hooks/useTTS';
+import Button from '../Button';
+import { Volume2, Pause, Play, Square, Mic, X, Check, ChevronDown } from 'lucide-react';
 
 interface TTSControlsProps {
   tts: UseTTSReturn;
@@ -42,22 +44,16 @@ export default function TTSControls({ tts, theme, compact = true, fixedBar = fal
 
   if (!tts.isSupported) {
     return (
-      <button
+      <Button
+        variant="secondary"
+        size="sm"
+        icon={<Volume2 size={14} />}
         disabled
-        title="TTS não suportado no seu navegador"
-        style={{
-          padding: '0.25rem 0.5rem',
-          fontSize: '0.75rem',
-          backgroundColor: currentTheme.buttonBg,
-          color: currentTheme.secondaryText,
-          border: 'none',
-          borderRadius: '3px',
-          cursor: 'not-allowed',
-          opacity: 0.5,
-        }}
+        title="TTS not supported in your browser"
+        style={{ opacity: 0.5 }}
       >
-        🔊 TTS
-      </button>
+        TTS
+      </Button>
     );
   }
 
@@ -97,44 +93,40 @@ export default function TTSControls({ tts, theme, compact = true, fixedBar = fal
         }}
       >
         {/* Play/Pause Button */}
-        <button
+        <Button
+          variant="ghost"
+          size="md"
+          icon={tts.state === 'playing' ? <Pause size={16} /> : <Play size={16} />}
           onClick={handlePlayPause}
-          title={tts.state === 'playing' ? 'Pausar' : 'Reproduzir'}
-          style={{
-            padding: '0.5rem 1rem',
-            fontSize: '0.875rem',
-            backgroundColor: currentTheme.buttonBg,
-            color: currentTheme.text,
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
+          title={tts.state === 'playing' ? 'Pause' : 'Play'}
+          style={{ 
             minWidth: '80px',
+            backgroundColor: currentTheme.buttonBg,
+            color: currentTheme.text
           }}
         >
-          {tts.state === 'playing' ? '⏸️ Pausar' : '▶️ Reproduzir'}
-        </button>
+          {tts.state === 'playing' ? 'Pause' : 'Play'}
+        </Button>
 
         {/* Stop Button */}
-        <button
+        <Button
+          variant="ghost"
+          size="md"
+          icon={<Square size={16} />}
           onClick={handleStop}
-          title="Parar"
-          style={{
-            padding: '0.5rem 1rem',
-            fontSize: '0.875rem',
+          title="Stop"
+          style={{ 
             backgroundColor: currentTheme.buttonBg,
-            color: currentTheme.text,
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
+            color: currentTheme.text
           }}
         >
-          ⏹️ Parar
-        </button>
+          Stop
+        </Button>
 
         {/* Rate Slider */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '150px' }}>
           <label style={{ fontSize: '0.8rem', color: currentTheme.text, whiteSpace: 'nowrap' }}>
-            Velocidade:
+            Speed:
           </label>
           <input
             type="range"
@@ -155,23 +147,21 @@ export default function TTSControls({ tts, theme, compact = true, fixedBar = fal
 
         {/* Voice Selector */}
         <div style={{ position: 'relative' }}>
-          <button
+          <Button
             ref={voiceButtonRef}
+            variant="ghost"
+            size="md"
+            icon={<Mic size={16} />}
             onClick={() => setIsVoiceDropdownOpen(!isVoiceDropdownOpen)}
-            title="Selecionar voz"
-            style={{
-              padding: '0.5rem 1rem',
-              fontSize: '0.875rem',
-              backgroundColor: currentTheme.buttonBg,
-              color: currentTheme.text,
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
+            title="Select voice"
+            style={{ 
               whiteSpace: 'nowrap',
+              backgroundColor: currentTheme.buttonBg,
+              color: currentTheme.text
             }}
           >
-            🎤 {tts.currentVoice?.name || 'Voz'} ▼
-          </button>
+            {tts.currentVoice?.name || 'Voice'} <ChevronDown size={14} style={{ marginLeft: '0.25rem' }} />
+          </Button>
           {isVoiceDropdownOpen && (
             <>
               <div
@@ -210,7 +200,7 @@ export default function TTSControls({ tts, theme, compact = true, fixedBar = fal
               >
                 {tts.voices.length === 0 ? (
                   <div style={{ padding: '0.5rem', fontSize: '0.75rem', color: currentTheme.secondaryText }}>
-                    Nenhuma voz disponível
+                    No voices available
                   </div>
                 ) : (
                   tts.voices.map((voice) => (
@@ -249,7 +239,7 @@ export default function TTSControls({ tts, theme, compact = true, fixedBar = fal
                         </span>
                       )}
                       {tts.currentVoice?.voiceURI === voice.voiceURI && (
-                        <span style={{ marginLeft: '0.5rem', color: '#007bff' }}>✓</span>
+                        <Check size={14} style={{ marginLeft: '0.5rem', color: '#007bff' }} />
                       )}
                     </div>
                   ))
@@ -268,21 +258,19 @@ export default function TTSControls({ tts, theme, compact = true, fixedBar = fal
 
         {/* Close Button */}
         {onClose && (
-          <button
+          <Button
+            variant="ghost"
+            size="md"
+            icon={<X size={16} />}
             onClick={onClose}
-            title="Fechar barra"
-            style={{
-              padding: '0.5rem 1rem',
-              fontSize: '0.875rem',
+            title="Close bar"
+            style={{ 
               backgroundColor: currentTheme.buttonBg,
-              color: currentTheme.text,
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
+              color: currentTheme.text
             }}
           >
-            ✕ Fechar
-          </button>
+            Close
+          </Button>
         )}
       </div>
     );
@@ -291,7 +279,10 @@ export default function TTSControls({ tts, theme, compact = true, fixedBar = fal
   if (compact && !isExpanded) {
     return (
       <div style={{ position: 'relative', display: 'inline-block' }}>
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={tts.state === 'playing' ? <Pause size={14} /> : tts.state === 'paused' ? <Play size={14} /> : <Volume2 size={14} />}
           onClick={() => {
             if (onToggleFixedBar) {
               onToggleFixedBar();
@@ -299,27 +290,18 @@ export default function TTSControls({ tts, theme, compact = true, fixedBar = fal
               setIsExpanded(true);
             }
           }}
-          title="Controles de TTS"
-          style={{
-            padding: '0.25rem 0.5rem',
-            fontSize: '0.75rem',
+          title="TTS controls"
+          style={{ 
             backgroundColor: currentTheme.buttonBg,
-            color: currentTheme.text,
-            border: 'none',
-            borderRadius: '3px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.25rem',
+            color: currentTheme.text
           }}
         >
-          {tts.state === 'playing' ? '⏸️' : tts.state === 'paused' ? '▶️' : '🔊'}
           {tts.state === 'playing' && tts.progress && (
             <span style={{ fontSize: '0.65rem', color: currentTheme.secondaryText }}>
               {Math.round(tts.progress.progress * 100)}%
             </span>
           )}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -338,44 +320,40 @@ export default function TTSControls({ tts, theme, compact = true, fixedBar = fal
       }}
     >
       {/* Play/Pause Button */}
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
+        icon={tts.state === 'playing' ? <Pause size={14} /> : <Play size={14} />}
         onClick={handlePlayPause}
-        title={tts.state === 'playing' ? 'Pausar' : 'Reproduzir'}
-        style={{
-          padding: '0.25rem 0.5rem',
-          fontSize: '0.75rem',
-          backgroundColor: currentTheme.buttonBg,
-          color: currentTheme.text,
-          border: 'none',
-          borderRadius: '3px',
-          cursor: 'pointer',
+        title={tts.state === 'playing' ? 'Pause' : 'Play'}
+        style={{ 
           minWidth: '60px',
+          backgroundColor: currentTheme.buttonBg,
+          color: currentTheme.text
         }}
       >
-        {tts.state === 'playing' ? '⏸️ Pausar' : '▶️ Reproduzir'}
-      </button>
+        {tts.state === 'playing' ? 'Pause' : 'Play'}
+      </Button>
 
       {/* Stop Button */}
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
+        icon={<Square size={14} />}
         onClick={handleStop}
-        title="Parar"
-        style={{
-          padding: '0.25rem 0.5rem',
-          fontSize: '0.75rem',
+        title="Stop"
+        style={{ 
           backgroundColor: currentTheme.buttonBg,
-          color: currentTheme.text,
-          border: 'none',
-          borderRadius: '3px',
-          cursor: 'pointer',
+          color: currentTheme.text
         }}
       >
-        ⏹️ Parar
-      </button>
+        Stop
+      </Button>
 
       {/* Rate Slider */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', minWidth: '120px' }}>
         <label style={{ fontSize: '0.7rem', color: currentTheme.text, whiteSpace: 'nowrap' }}>
-          Velocidade:
+          Speed:
         </label>
         <input
           type="range"
@@ -396,23 +374,21 @@ export default function TTSControls({ tts, theme, compact = true, fixedBar = fal
 
       {/* Voice Selector */}
       <div style={{ position: 'relative' }}>
-        <button
+        <Button
           ref={voiceButtonRef}
+          variant="ghost"
+          size="sm"
+          icon={<Mic size={14} />}
           onClick={() => setIsVoiceDropdownOpen(!isVoiceDropdownOpen)}
-          title="Selecionar voz"
-          style={{
-            padding: '0.25rem 0.5rem',
-            fontSize: '0.75rem',
-            backgroundColor: currentTheme.buttonBg,
-            color: currentTheme.text,
-            border: 'none',
-            borderRadius: '3px',
-            cursor: 'pointer',
+          title="Select voice"
+          style={{ 
             whiteSpace: 'nowrap',
+            backgroundColor: currentTheme.buttonBg,
+            color: currentTheme.text
           }}
         >
-          🎤 {tts.currentVoice?.name || 'Voz'} ▼
-        </button>
+          {tts.currentVoice?.name || 'Voice'} <ChevronDown size={12} style={{ marginLeft: '0.25rem' }} />
+        </Button>
         {isVoiceDropdownOpen && (
           <>
             <div
@@ -451,7 +427,7 @@ export default function TTSControls({ tts, theme, compact = true, fixedBar = fal
             >
               {tts.voices.length === 0 ? (
                 <div style={{ padding: '0.5rem', fontSize: '0.75rem', color: currentTheme.secondaryText }}>
-                  Nenhuma voz disponível
+                  No voices available
                 </div>
               ) : (
                 tts.voices.map((voice) => (
@@ -490,7 +466,7 @@ export default function TTSControls({ tts, theme, compact = true, fixedBar = fal
                       </span>
                     )}
                     {tts.currentVoice?.voiceURI === voice.voiceURI && (
-                      <span style={{ marginLeft: '0.5rem', color: '#007bff' }}>✓</span>
+                      <Check size={14} style={{ marginLeft: '0.5rem', color: '#007bff' }} />
                     )}
                   </div>
                 ))
@@ -509,21 +485,14 @@ export default function TTSControls({ tts, theme, compact = true, fixedBar = fal
 
       {/* Collapse Button (only in compact mode) */}
       {compact && (
-        <button
+        <Button
+          variant="icon"
+          size="sm"
+          icon={<X size={12} />}
           onClick={() => setIsExpanded(false)}
-          title="Recolher"
-          style={{
-            padding: '0.15rem 0.3rem',
-            fontSize: '0.7rem',
-            backgroundColor: currentTheme.buttonBg,
-            color: currentTheme.text,
-            border: 'none',
-            borderRadius: '3px',
-            cursor: 'pointer',
-          }}
-        >
-          ✕
-        </button>
+          title="Collapse"
+          style={{ color: currentTheme.text }}
+        />
       )}
     </div>
   );

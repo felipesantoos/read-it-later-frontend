@@ -45,7 +45,7 @@ export default function ArticleContent({ article, contentRef, theme, fontSize, l
           linkText.href = imgSrc;
           linkText.target = '_blank';
           linkText.rel = 'noopener noreferrer';
-          linkText.textContent = `🔗 Imagem: ${imgSrc.length > 60 ? imgSrc.substring(0, 60) + '...' : imgSrc}`;
+          linkText.textContent = `Imagem: ${imgSrc.length > 60 ? imgSrc.substring(0, 60) + '...' : imgSrc}`;
           linkText.style.cssText = 'color: #007bff; text-decoration: underline; word-break: break-all;';
           
           linkWrapper.appendChild(linkText);
@@ -468,7 +468,7 @@ export default function ArticleContent({ article, contentRef, theme, fontSize, l
                     link.href = imageUrl;
                     link.target = '_blank';
                     link.rel = 'noopener noreferrer';
-                    link.textContent = '🔗 Ver imagem';
+                    link.textContent = 'Ver imagem';
                     link.style.cssText = 'color: #007bff; text-decoration: underline; word-break: break-all; font-size: 0.875rem;';
                     linkWrapper.appendChild(link);
                     img.parentNode?.insertBefore(linkWrapper, img);

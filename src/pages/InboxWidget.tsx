@@ -3,7 +3,10 @@ import { articlesApi, type Article, type ArticleCounts } from '../api/articles';
 import { searchApi } from '../api/search';
 import ArticleCard from '../components/ArticleCard';
 import Toast from '../components/Toast';
-import { themeStyles, type Theme } from '../utils/themeStyles';
+import { themeStyles } from '../utils/themeStyles';
+import { useTheme } from '../contexts/ThemeContext';
+import Button from '../components/Button';
+import { Inbox, RefreshCw, Moon, ScrollText, Sun, BookOpen, Star, BarChart, Download } from 'lucide-react';
 import '../App.css';
 
 type SortOption = 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'reading-time' | 'progress';
@@ -20,7 +23,7 @@ export default function InboxWidget() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [urlInput, setUrlInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [theme, setTheme] = useState<Theme>('light');
+  const { theme, cycleTheme } = useTheme();
   const [statusCounts, setStatusCounts] = useState<ArticleCounts>({
     UNREAD: 0,
     READING: 0,
@@ -64,16 +67,6 @@ export default function InboxWidget() {
     await Promise.all([loadArticles(), loadStatusCounts()]);
   }
 
-  const cycleTheme = () => {
-    if (theme === 'light') {
-      setTheme('dark');
-    } else if (theme === 'dark') {
-      setTheme('sepia');
-    } else {
-      setTheme('light');
-    }
-  };
-
   const currentTheme = themeStyles[theme];
 
   async function loadArticles() {
@@ -96,7 +89,7 @@ export default function InboxWidget() {
       setArticles(filtered);
     } catch (error) {
       console.error('Error loading articles:', error);
-      setMessage({ text: 'Erro ao carregar artigos', type: 'error' });
+      setMessage({ text: 'Error loading articles', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -129,7 +122,7 @@ export default function InboxWidget() {
       setArticles(filtered);
     } catch (error) {
       console.error('Error searching:', error);
-      setMessage({ text: 'Erro ao buscar', type: 'error' });
+      setMessage({ text: 'Error searching', type: 'error' });
     } finally {
       setIsSearching(false);
     }
@@ -157,19 +150,19 @@ export default function InboxWidget() {
 
   async function handleSaveUrl() {
     if (!urlInput.trim()) {
-      setMessage({ text: 'Por favor, insira uma URL', type: 'error' });
+      setMessage({ text: 'Please enter a URL', type: 'error' });
       return;
     }
 
     setIsSaving(true);
     try {
       await articlesApi.create({ url: urlInput.trim() });
-      setMessage({ text: 'Artigo salvo com sucesso!', type: 'success' });
+      setMessage({ text: 'Article saved successfully!', type: 'success' });
       setUrlInput('');
       await handleArticleUpdate();
     } catch (error) {
       console.error('Error saving article:', error);
-      setMessage({ text: error instanceof Error ? error.message : 'Erro ao salvar artigo', type: 'error' });
+      setMessage({ text: error instanceof Error ? error.message : 'Error saving article', type: 'error' });
     } finally {
       setIsSaving(false);
     }
@@ -229,7 +222,9 @@ export default function InboxWidget() {
 
       <div className="flex-between mb-1" style={{ alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <h2 className="widget-title" style={{ fontSize: '1rem', marginBottom: 0 }}>📥 Inbox</h2>
+          <h2 className="widget-title" style={{ fontSize: '1rem', marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Inbox size={20} /> Inbox
+          </h2>
           {unreadCount > 0 && (
             <span
               style={{
@@ -244,45 +239,51 @@ export default function InboxWidget() {
               {unreadCount}
             </span>
           )}
-          <button
+          <Button
+            variant="icon"
+            size="sm"
+            icon={<RefreshCw size={14} />}
             onClick={handleRefresh}
-            title="Atualizar"
-            style={{ padding: '0.25rem', fontSize: '0.75rem', minWidth: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: currentTheme.buttonBg, color: currentTheme.text }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
-              <path d="M21 3v5h-5"></path>
-              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
-              <path d="M3 21v-5h5"></path>
-            </svg>
-          </button>
-          <button
+            title="Refresh"
+            style={{ color: currentTheme.text }}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={theme === 'light' ? <Moon size={14} /> : theme === 'dark' ? <ScrollText size={14} /> : <Sun size={14} />}
             onClick={cycleTheme}
-            title="Alternar tema"
-            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', backgroundColor: currentTheme.buttonBg, color: currentTheme.text }}
-          >
-            {theme === 'light' ? '🌙' : theme === 'dark' ? '📜' : '☀️'}
-          </button>
+            title="Toggle theme"
+            style={{ color: currentTheme.text }}
+          />
         </div>
         <div className="flex gap-1">
-          <a
-            href="/reading-now"
-            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', textDecoration: 'none', color: currentTheme.text }}
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<BookOpen size={14} />}
+            onClick={() => window.location.href = '/reading-now'}
+            style={{ color: currentTheme.text, textDecoration: 'none' }}
           >
-            📖 Lendo
-          </a>
-          <a
-            href="/favorites"
-            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', textDecoration: 'none', color: currentTheme.text }}
+            Reading
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<Star size={14} />}
+            onClick={() => window.location.href = '/favorites'}
+            style={{ color: currentTheme.text, textDecoration: 'none' }}
           >
-            ⭐ Favoritos
-          </a>
-          <a
-            href="/analytics"
-            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', textDecoration: 'none', color: currentTheme.text }}
+            Favorites
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<BarChart size={14} />}
+            onClick={() => window.location.href = '/analytics'}
+            style={{ color: currentTheme.text, textDecoration: 'none' }}
           >
-            📊 Stats
-          </a>
+            Stats
+          </Button>
         </div>
       </div>
 
@@ -291,7 +292,7 @@ export default function InboxWidget() {
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <input
             type="text"
-            placeholder="Cole a URL aqui..."
+            placeholder="Paste URL here..."
             value={urlInput}
             onChange={(e) => setUrlInput(e.target.value)}
             onKeyPress={(e) => {
@@ -308,7 +309,7 @@ export default function InboxWidget() {
             disabled={isSaving || !urlInput.trim()}
             style={{ padding: '0.5rem 1rem' }}
           >
-            {isSaving ? 'Salvando...' : 'Salvar'}
+            {isSaving ? 'Saving...' : 'Save'}
           </button>
         </div>
       </div>
@@ -317,7 +318,7 @@ export default function InboxWidget() {
       <div className="card mb-1" style={{ padding: '0.5rem', backgroundColor: currentTheme.cardBg, border: `1px solid ${currentTheme.cardBorder}` }}>
         <input
           type="text"
-          placeholder="🔍 Buscar artigos (título, URL, conteúdo, tags)..."
+          placeholder="🔍 Search articles (title, URL, content, tags)..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           style={{ width: '100%', padding: '0.5rem', fontSize: '0.875rem' }}
@@ -328,35 +329,35 @@ export default function InboxWidget() {
       <div className="card mb-1" style={{ padding: '0.5rem', backgroundColor: currentTheme.cardBg, border: `1px solid ${currentTheme.cardBorder}` }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Ordenar:</label>
+            <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Sort:</label>
             <select
               value={sortOption}
               onChange={(e) => setSortOption(e.target.value as SortOption)}
               style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', flex: 1, minWidth: '150px' }}
             >
-              <option value="date-desc">Data (mais recente)</option>
-              <option value="date-asc">Data (mais antiga)</option>
-              <option value="title-asc">Título (A-Z)</option>
-              <option value="title-desc">Título (Z-A)</option>
-              <option value="reading-time">Tempo de leitura</option>
-              <option value="progress">Progresso</option>
+              <option value="date-desc">Date (newest)</option>
+              <option value="date-asc">Date (oldest)</option>
+              <option value="title-asc">Title (A-Z)</option>
+              <option value="title-desc">Title (Z-A)</option>
+              <option value="reading-time">Reading time</option>
+              <option value="progress">Progress</option>
             </select>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Tipo:</label>
+            <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Type:</label>
             <select
               value={contentTypeFilter}
               onChange={(e) => setContentTypeFilter(e.target.value as ContentTypeFilter)}
               style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', flex: 1, minWidth: '150px' }}
             >
-              <option value="all">Todos</option>
-              <option value="ARTICLE">Artigo</option>
+              <option value="all">All</option>
+              <option value="ARTICLE">Article</option>
               <option value="BLOG">Blog</option>
               <option value="PDF">PDF</option>
               <option value="YOUTUBE">YouTube</option>
               <option value="TWITTER">Twitter</option>
               <option value="NEWSLETTER">Newsletter</option>
-              <option value="BOOK">Livro</option>
+              <option value="BOOK">Book</option>
               <option value="EBOOK">E-book</option>
             </select>
           </div>
@@ -365,7 +366,10 @@ export default function InboxWidget() {
 
       {/* Export button */}
       <div className="card mb-1" style={{ padding: '0.5rem', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', backgroundColor: currentTheme.cardBg, border: `1px solid ${currentTheme.cardBorder}` }}>
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={<Download size={14} />}
           onClick={async () => {
             try {
               const token = localStorage.getItem('auth_token') || new URLSearchParams(window.location.search).get('token') || '';
@@ -385,27 +389,21 @@ export default function InboxWidget() {
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
-                setMessage({ text: 'Exportado com sucesso!', type: 'success' });
+                setMessage({ text: 'Exported successfully!', type: 'success' });
               } else {
-                throw new Error('Erro ao exportar');
+                throw new Error('Error exporting');
               }
             } catch (error) {
-              setMessage({ text: 'Erro ao exportar', type: 'error' });
+              setMessage({ text: 'Error exporting', type: 'error' });
             }
           }}
-          style={{
-            padding: '0.25rem 0.5rem',
-            fontSize: '0.75rem',
-            backgroundColor: '#6c757d',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
         >
-          📥 Exportar JSON
-        </button>
-        <button
+          Export JSON
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={<Download size={14} />}
           onClick={async () => {
             try {
               const token = localStorage.getItem('auth_token') || new URLSearchParams(window.location.search).get('token') || '';
@@ -425,26 +423,17 @@ export default function InboxWidget() {
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
-                setMessage({ text: 'Exportado com sucesso!', type: 'success' });
+                setMessage({ text: 'Exported successfully!', type: 'success' });
               } else {
-                throw new Error('Erro ao exportar');
+                throw new Error('Error exporting');
               }
             } catch (error) {
-              setMessage({ text: 'Erro ao exportar', type: 'error' });
+              setMessage({ text: 'Error exporting', type: 'error' });
             }
           }}
-          style={{
-            padding: '0.25rem 0.5rem',
-            fontSize: '0.75rem',
-            backgroundColor: '#6c757d',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
         >
-          📥 Exportar CSV
-        </button>
+          Export CSV
+        </Button>
       </div>
 
       {/* Current Reading Session Status */}
@@ -456,9 +445,9 @@ export default function InboxWidget() {
           borderRadius: '6px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-            <span style={{ fontSize: '1rem' }}>📖</span>
+            <BookOpen size={20} style={{ color: '#007bff' }} />
             <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#007bff' }}>
-              Lendo agora:
+              Reading now:
             </span>
           </div>
           <div style={{ marginLeft: '1.5rem' }}>
@@ -498,7 +487,7 @@ export default function InboxWidget() {
             )}
             {currentReadingSession.lastReadAt && (
               <p style={{ fontSize: '0.7rem', color: '#666', margin: '0.25rem 0 0 0' }}>
-                Última leitura: {new Date(currentReadingSession.lastReadAt).toLocaleString('pt-BR')}
+                Last read: {new Date(currentReadingSession.lastReadAt).toLocaleString('en-US')}
               </p>
             )}
           </div>
@@ -512,47 +501,47 @@ export default function InboxWidget() {
           className={statusFilter === 'UNREAD' ? 'primary' : ''}
           style={{ flex: 1, minWidth: '120px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
         >
-          Não Lidos ({unreadCount})
+          Unread ({unreadCount})
         </button>
         <button
           onClick={() => setStatusFilter('READING')}
           className={statusFilter === 'READING' ? 'primary' : ''}
           style={{ flex: 1, minWidth: '120px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
         >
-          Lendo ({readingCount})
+          Reading ({readingCount})
         </button>
         <button
           onClick={() => setStatusFilter('PAUSED')}
           className={statusFilter === 'PAUSED' ? 'primary' : ''}
           style={{ flex: 1, minWidth: '120px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
         >
-          Pausados ({pausedCount})
+          Paused ({pausedCount})
         </button>
         <button
           onClick={() => setStatusFilter('FINISHED')}
           className={statusFilter === 'FINISHED' ? 'primary' : ''}
           style={{ flex: 1, minWidth: '120px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
         >
-          Lidos ({finishedCount})
+          Finished ({finishedCount})
         </button>
         <button
           onClick={() => setStatusFilter('all')}
           className={statusFilter === 'all' ? 'primary' : ''}
           style={{ flex: 1, minWidth: '120px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
         >
-          Todos
+          All
         </button>
       </div>
 
       {/* Articles list */}
       {loading || isSearching ? (
         <div style={{ padding: '2rem', textAlign: 'center' }}>
-          <p>{isSearching ? 'Buscando...' : 'Carregando...'}</p>
+          <p>{isSearching ? 'Searching...' : 'Loading...'}</p>
         </div>
       ) : articles.length === 0 ? (
         <div className="card" style={{ padding: '1rem', textAlign: 'center', backgroundColor: currentTheme.cardBg, border: `1px solid ${currentTheme.cardBorder}` }}>
           <p style={{ color: currentTheme.secondaryText, margin: 0 }}>
-            {searchQuery ? 'Nenhum artigo encontrado' : 'Nenhum artigo encontrado'}
+            {searchQuery ? 'No articles found' : 'No articles found'}
           </p>
         </div>
       ) : (

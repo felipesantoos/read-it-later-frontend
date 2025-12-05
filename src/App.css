@@ -100,7 +100,7 @@ button {
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.875rem;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
 button.primary {
@@ -108,8 +108,15 @@ button.primary {
   color: white;
 }
 
-button.primary:hover {
+button.primary:hover:not(:disabled) {
   background-color: #0056b3;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+button.primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 123, 255, 0.3);
 }
 
 button.danger {
@@ -117,13 +124,25 @@ button.danger {
   color: white;
 }
 
-button.danger:hover {
+button.danger:hover:not(:disabled) {
   background-color: #c82333;
+  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+  transform: translateY(-1px);
+}
+
+button.danger:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(220, 53, 69, 0.3);
 }
 
 button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+button:focus-visible {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
 }
 
 input,

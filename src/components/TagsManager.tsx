@@ -3,6 +3,8 @@ import { tagsApi, type Tag } from '../api/tags';
 import Toast from './Toast';
 import type { Theme } from '../utils/themeStyles';
 import { themeStyles } from '../utils/themeStyles';
+import Button from './Button';
+import { Plus, X } from 'lucide-react';
 import '../App.css';
 
 interface TagsManagerProps {
@@ -101,10 +103,10 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
       await tagsApi.create({ name: newTagName.trim() });
       setNewTagName('');
       await loadTags();
-      setMessage({ text: 'Tag criada!', type: 'success' });
+      setMessage({ text: 'Tag created!', type: 'success' });
     } catch (error) {
       console.error('Error creating tag:', error);
-      setMessage({ text: 'Erro ao criar tag', type: 'error' });
+      setMessage({ text: 'Error creating tag', type: 'error' });
     }
   }
 
@@ -128,10 +130,10 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
       
       onUpdate?.();
       setShowPopover(false);
-      setMessage({ text: 'Tags atualizadas', type: 'success' });
+      setMessage({ text: 'Tags updated', type: 'success' });
     } catch (error) {
       console.error('Error applying tags:', error);
-      setMessage({ text: 'Erro ao atualizar tags', type: 'error' });
+      setMessage({ text: 'Error updating tags', type: 'error' });
     }
   }
 
@@ -155,23 +157,23 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
         await tagsApi.addToArticle(tagId, articleId);
       }
       onUpdate?.();
-      setMessage({ text: isAssigned ? 'Tag removida' : 'Tag adicionada', type: 'success' });
+      setMessage({ text: isAssigned ? 'Tag removed' : 'Tag added', type: 'success' });
     } catch (error) {
       console.error('Error toggling tag:', error);
-      setMessage({ text: 'Erro ao atualizar tag', type: 'error' });
+      setMessage({ text: 'Error updating tag', type: 'error' });
     }
   }
 
   async function handleDeleteTag(tagId: string) {
-    if (!confirm('Tem certeza que deseja deletar esta tag?')) return;
+    if (!confirm('Are you sure you want to delete this tag?')) return;
 
     try {
       await tagsApi.delete(tagId);
       await loadTags();
-      setMessage({ text: 'Tag deletada', type: 'success' });
+      setMessage({ text: 'Tag deleted', type: 'success' });
     } catch (error) {
       console.error('Error deleting tag:', error);
-      setMessage({ text: 'Erro ao deletar tag', type: 'error' });
+      setMessage({ text: 'Error deleting tag', type: 'error' });
     }
   }
 
@@ -194,20 +196,18 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
           />
         )}
         <div style={{ position: 'relative' }} data-popover-container>
-          <button
+          <Button
             ref={buttonRef}
+            variant="ghost"
+            size="sm"
             onClick={() => setShowPopover(!showPopover)}
+            title="Manage tags"
             style={{
-              padding: '0.25rem 0.5rem',
-              fontSize: '0.75rem',
+              position: 'relative',
               backgroundColor: currentTheme.buttonBg,
               border: `1px solid ${currentTheme.cardBorder}`,
-              borderRadius: '4px',
-              cursor: 'pointer',
               color: currentTheme.text,
-              position: 'relative',
             }}
-            title="Gerenciar tags"
           >
             Tags
             {currentTags.length > 0 && (
@@ -230,7 +230,7 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                 {currentTags.length}
               </span>
             )}
-          </button>
+          </Button>
           {showPopover && popoverPosition && (
             <>
               <div
@@ -268,7 +268,7 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                 <div style={{ padding: '0.5rem', borderBottom: `1px solid ${currentTheme.cardBorder}` }}>
                   <input
                     type="text"
-                    placeholder="Buscar tags..."
+                    placeholder="Search tags..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     style={{
@@ -288,7 +288,7 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                 <div style={{ padding: '0.5rem', borderBottom: `1px solid ${currentTheme.cardBorder}`, display: 'flex', gap: '0.25rem' }}>
                   <input
                     type="text"
-                    placeholder="Nova tag..."
+                    placeholder="New tag..."
                     value={newTagName}
                     onChange={(e) => setNewTagName(e.target.value)}
                     onKeyPress={(e) => {
@@ -306,23 +306,20 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                       color: currentTheme.text,
                     }}
                   />
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={handleCreateTag}
                     disabled={!newTagName.trim()}
                     style={{
-                      padding: '0.25rem 0.5rem',
-                      fontSize: '0.75rem',
                       whiteSpace: 'nowrap',
                       backgroundColor: currentTheme.buttonBg,
-                      color: currentTheme.text,
                       border: `1px solid ${currentTheme.cardBorder}`,
-                      borderRadius: '4px',
-                      cursor: newTagName.trim() ? 'pointer' : 'not-allowed',
-                      opacity: newTagName.trim() ? 1 : 0.5,
+                      color: currentTheme.text,
                     }}
                   >
-                    Criar
-                  </button>
+                    Create
+                  </Button>
                 </div>
 
                 {/* Tags list */}
@@ -333,10 +330,10 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                   maxHeight: '250px',
                 }}>
                   {loading ? (
-                    <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, textAlign: 'center' }}>Carregando...</p>
+                    <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, textAlign: 'center' }}>Loading...</p>
                   ) : filteredTags.length === 0 ? (
                     <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, textAlign: 'center' }}>
-                      {searchQuery ? 'Nenhuma tag encontrada' : 'Nenhuma tag ainda'}
+                      {searchQuery ? 'No tags found' : 'No tags yet'}
                     </p>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
@@ -364,23 +361,17 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                               style={{ cursor: 'pointer', width: '16px', height: '16px', flexShrink: 0 }}
                             />
                             <span style={{ fontSize: '0.75rem', flex: 1, color: currentTheme.text }}>{tag.name}</span>
-                            <button
+                            <Button
+                              variant="icon"
+                              size="sm"
+                              icon={<X size={14} />}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteTag(tag.id);
                               }}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                color: '#dc3545',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                padding: '0 0.25rem',
-                              }}
-                              title="Deletar tag"
-                            >
-                              ×
-                            </button>
+                              title="Delete tag"
+                              style={{ color: '#dc3545', padding: '0 0.25rem' }}
+                            />
                           </div>
                         );
                       })}
@@ -396,7 +387,9 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                   gap: '0.5rem',
                   justifyContent: 'flex-end',
                 }}>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       setShowPopover(false);
                       setSearchQuery('');
@@ -404,31 +397,20 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                       setSelectedTagIds(assignedIds);
                     }}
                     style={{
-                      padding: '0.25rem 0.75rem',
-                      fontSize: '0.75rem',
                       backgroundColor: currentTheme.buttonBg,
-                      color: currentTheme.text,
                       border: `1px solid ${currentTheme.cardBorder}`,
-                      borderRadius: '4px',
-                      cursor: 'pointer',
+                      color: currentTheme.text,
                     }}
                   >
-                    Cancelar
-                  </button>
-                  <button
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
                     onClick={handleApplyTags}
-                    style={{
-                      padding: '0.25rem 0.75rem',
-                      fontSize: '0.75rem',
-                      backgroundColor: '#007bff',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                    }}
                   >
-                    Aplicar
-                  </button>
+                    Apply
+                  </Button>
                 </div>
               </div>
             </>
@@ -455,7 +437,7 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
         <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '0.25rem', alignItems: 'center' }}>
           <span style={{ fontSize: '0.75rem', fontWeight: 500, marginRight: '0.25rem' }}>Tags:</span>
           {currentTags.length === 0 ? (
-            <span style={{ fontSize: '0.75rem', color: '#666' }}>Nenhuma tag atribuída</span>
+            <span style={{ fontSize: '0.75rem', color: '#666' }}>No tags assigned</span>
           ) : (
             <>
               {currentTags.map((at) => {
@@ -475,7 +457,7 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                       cursor: 'pointer',
                     }}
                     onClick={() => handleToggleTag(tag.id)}
-                    title="Clique para remover"
+                    title="Click to remove"
                   >
                     <span>{tag.name}</span>
                   </div>
@@ -484,21 +466,21 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
             </>
           )}
           <div style={{ position: 'relative' }} data-popover-container>
-            <button
+            <Button
               ref={buttonRef}
+              variant="icon"
+              size="sm"
+              icon={<Plus size={14} />}
               onClick={() => setShowPopover(!showPopover)}
+              title="Add tag"
               style={{
                 padding: '0.25rem 0.5rem',
                 fontSize: '0.75rem',
-                backgroundColor: '#e9ecef',
-                border: '1px solid #dee2e6',
-                borderRadius: '12px',
-                cursor: 'pointer',
+                backgroundColor: currentTheme.buttonBg,
+                border: `1px solid ${currentTheme.cardBorder}`,
+                color: currentTheme.text,
               }}
-              title="Adicionar tag"
-            >
-              +
-            </button>
+            />
 
             {/* Popover */}
             {showPopover && popoverPosition && (
@@ -538,7 +520,7 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                 <div style={{ padding: '0.5rem', borderBottom: `1px solid ${currentTheme.cardBorder}` }}>
                   <input
                     type="text"
-                    placeholder="Buscar tags..."
+                    placeholder="Search tags..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     style={{
@@ -558,7 +540,7 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                 <div style={{ padding: '0.5rem', borderBottom: `1px solid ${currentTheme.cardBorder}`, display: 'flex', gap: '0.25rem' }}>
                   <input
                     type="text"
-                    placeholder="Nova tag..."
+                    placeholder="New tag..."
                     value={newTagName}
                     onChange={(e) => setNewTagName(e.target.value)}
                     onKeyPress={(e) => {
@@ -576,23 +558,20 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                       color: currentTheme.text,
                     }}
                   />
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={handleCreateTag}
                     disabled={!newTagName.trim()}
                     style={{
-                      padding: '0.25rem 0.5rem',
-                      fontSize: '0.75rem',
                       whiteSpace: 'nowrap',
                       backgroundColor: currentTheme.buttonBg,
-                      color: currentTheme.text,
                       border: `1px solid ${currentTheme.cardBorder}`,
-                      borderRadius: '4px',
-                      cursor: newTagName.trim() ? 'pointer' : 'not-allowed',
-                      opacity: newTagName.trim() ? 1 : 0.5,
+                      color: currentTheme.text,
                     }}
                   >
-                    Criar
-                  </button>
+                    Create
+                  </Button>
                 </div>
 
                 {/* Tags list */}
@@ -603,10 +582,10 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                   maxHeight: '250px',
                 }}>
                   {loading ? (
-                    <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, textAlign: 'center' }}>Carregando...</p>
+                    <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, textAlign: 'center' }}>Loading...</p>
                   ) : filteredTags.length === 0 ? (
                     <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, textAlign: 'center' }}>
-                      {searchQuery ? 'Nenhuma tag encontrada' : 'Nenhuma tag ainda'}
+                      {searchQuery ? 'No tags found' : 'No tags yet'}
                     </p>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
@@ -634,23 +613,17 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                               style={{ cursor: 'pointer', width: '16px', height: '16px', flexShrink: 0 }}
                             />
                             <span style={{ fontSize: '0.75rem', flex: 1, color: currentTheme.text }}>{tag.name}</span>
-                            <button
+                            <Button
+                              variant="icon"
+                              size="sm"
+                              icon={<X size={14} />}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteTag(tag.id);
                               }}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                color: '#dc3545',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                padding: '0 0.25rem',
-                              }}
-                              title="Deletar tag"
-                            >
-                              ×
-                            </button>
+                              title="Delete tag"
+                              style={{ color: '#dc3545', padding: '0 0.25rem' }}
+                            />
                           </div>
                         );
                       })}
@@ -666,7 +639,9 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                   gap: '0.5rem',
                   justifyContent: 'flex-end',
                 }}>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       setShowPopover(false);
                       setSearchQuery('');
@@ -674,31 +649,20 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                       setSelectedTagIds(assignedIds);
                     }}
                     style={{
-                      padding: '0.25rem 0.75rem',
-                      fontSize: '0.75rem',
                       backgroundColor: currentTheme.buttonBg,
-                      color: currentTheme.text,
                       border: `1px solid ${currentTheme.cardBorder}`,
-                      borderRadius: '4px',
-                      cursor: 'pointer',
+                      color: currentTheme.text,
                     }}
                   >
-                    Cancelar
-                  </button>
-                  <button
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
                     onClick={handleApplyTags}
-                    style={{
-                      padding: '0.25rem 0.75rem',
-                      fontSize: '0.75rem',
-                      backgroundColor: '#007bff',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                    }}
                   >
-                    Aplicar
-                  </button>
+                    Apply
+                  </Button>
                 </div>
                 </div>
               </>

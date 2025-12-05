@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+import Button from './Button';
+import { X } from 'lucide-react';
 import '../App.css';
 
 interface ToastProps {
@@ -45,19 +47,13 @@ export default function Toast({ message, type, onClose, duration = 3000 }: Toast
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
         <p style={{ margin: 0, fontSize: '0.875rem' }}>{message}</p>
-        <button
+        <Button
+          variant="icon"
+          size="sm"
+          icon={<X size={16} />}
           onClick={onClose}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '1.2rem',
-            padding: 0,
-            lineHeight: 1,
-          }}
-        >
-          ×
-        </button>
+          style={{ padding: 0 }}
+        />
       </div>
     </div>
   );

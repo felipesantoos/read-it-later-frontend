@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
 import { analyticsApi, type Analytics } from '../api/analytics';
 import Toast from '../components/Toast';
-import { themeStyles, type Theme } from '../utils/themeStyles';
+import { themeStyles } from '../utils/themeStyles';
+import { useTheme } from '../contexts/ThemeContext';
+import Button from '../components/Button';
+import { BarChart, RefreshCw, Moon, ScrollText, Sun, ArrowLeft } from 'lucide-react';
 import '../App.css';
 
 export default function AnalyticsWidget() {
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
-  const [theme, setTheme] = useState<Theme>('light');
+  const { theme, cycleTheme } = useTheme();
 
   useEffect(() => {
     loadAnalytics();
@@ -21,7 +24,7 @@ export default function AnalyticsWidget() {
       setAnalytics(response.data);
     } catch (error) {
       console.error('Error loading analytics:', error);
-      setMessage({ text: 'Erro ao carregar estatísticas', type: 'error' });
+      setMessage({ text: 'Error loading statistics', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -30,16 +33,6 @@ export default function AnalyticsWidget() {
   async function handleRefresh() {
     await loadAnalytics();
   }
-
-  const cycleTheme = () => {
-    if (theme === 'light') {
-      setTheme('dark');
-    } else if (theme === 'dark') {
-      setTheme('sepia');
-    } else {
-      setTheme('light');
-    }
-  };
 
   const currentTheme = themeStyles[theme];
 
@@ -53,10 +46,9 @@ export default function AnalyticsWidget() {
   };
 
   if (loading) {
-    const currentTheme = themeStyles[theme];
     return (
       <div className="widget-container" style={{ backgroundColor: currentTheme.bg, color: currentTheme.text }}>
-        <p>Carregando...</p>
+        <p>Loading...</p>
       </div>
     );
   }
@@ -64,7 +56,7 @@ export default function AnalyticsWidget() {
   if (!analytics) {
     return (
       <div className="widget-container" style={{ backgroundColor: currentTheme.bg, color: currentTheme.text }}>
-        <p>Não foi possível carregar as estatísticas</p>
+        <p>Could not load statistics</p>
       </div>
     );
   }
@@ -82,33 +74,35 @@ export default function AnalyticsWidget() {
 
       <div className="flex-between mb-1" style={{ alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <h2 className="widget-title" style={{ fontSize: '1rem', marginBottom: 0 }}>📊 Estatísticas</h2>
-          <button
+          <h2 className="widget-title" style={{ fontSize: '1rem', marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <BarChart size={20} /> Statistics
+          </h2>
+          <Button
+            variant="icon"
+            size="sm"
+            icon={<RefreshCw size={14} />}
             onClick={handleRefresh}
-            title="Atualizar"
-            style={{ padding: '0.25rem', fontSize: '0.75rem', minWidth: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: currentTheme.buttonBg, color: currentTheme.text }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
-              <path d="M21 3v5h-5"></path>
-              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
-              <path d="M3 21v-5h5"></path>
-            </svg>
-          </button>
-          <button
+            title="Refresh"
+            style={{ color: currentTheme.text }}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={theme === 'light' ? <Moon size={14} /> : theme === 'dark' ? <ScrollText size={14} /> : <Sun size={14} />}
             onClick={cycleTheme}
-            title="Alternar tema"
-            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', backgroundColor: currentTheme.buttonBg, color: currentTheme.text }}
-          >
-            {theme === 'light' ? '🌙' : theme === 'dark' ? '📜' : '☀️'}
-          </button>
+            title="Toggle theme"
+            style={{ color: currentTheme.text }}
+          />
         </div>
-        <a
-          href="/inbox"
-          style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', textDecoration: 'none', color: currentTheme.text }}
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<ArrowLeft size={14} />}
+          onClick={() => window.location.href = '/inbox'}
+          style={{ color: currentTheme.text, textDecoration: 'none' }}
         >
-          ← Voltar
-        </a>
+          Back
+        </Button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
@@ -117,7 +111,7 @@ export default function AnalyticsWidget() {
             {analytics.totalSaved}
           </div>
           <div style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, marginTop: '0.25rem' }}>
-            Total Salvo
+            Total Saved
           </div>
         </div>
 
@@ -126,7 +120,7 @@ export default function AnalyticsWidget() {
             {analytics.totalRead}
           </div>
           <div style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, marginTop: '0.25rem' }}>
-            Total Lido
+            Total Read
           </div>
         </div>
 
@@ -135,7 +129,7 @@ export default function AnalyticsWidget() {
             {analytics.totalFinished}
           </div>
           <div style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, marginTop: '0.25rem' }}>
-            Finalizados
+            Finished
           </div>
         </div>
 
@@ -144,13 +138,13 @@ export default function AnalyticsWidget() {
             {analytics.totalFavorited}
           </div>
           <div style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, marginTop: '0.25rem' }}>
-            Favoritos
+            Favorites
           </div>
         </div>
       </div>
 
       <div className="card mb-1" style={{ padding: '0.75rem', backgroundColor: currentTheme.cardBg, border: `1px solid ${currentTheme.cardBorder}` }}>
-        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem', color: currentTheme.text }}>Taxa de Conclusão</h3>
+        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem', color: currentTheme.text }}>Completion Rate</h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div style={{ flex: 1, height: '20px', backgroundColor: currentTheme.progressBg, borderRadius: '10px', overflow: 'hidden' }}>
             <div
@@ -169,14 +163,14 @@ export default function AnalyticsWidget() {
       </div>
 
       <div className="card mb-1" style={{ padding: '0.75rem', backgroundColor: currentTheme.cardBg, border: `1px solid ${currentTheme.cardBorder}` }}>
-        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem', color: currentTheme.text }}>Tempo de Leitura Hoje</h3>
+        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem', color: currentTheme.text }}>Reading Time Today</h3>
         <div style={{ fontSize: '1.25rem', fontWeight: 600, color: '#007bff' }}>
           {formatTime(analytics.readingTimeToday)}
         </div>
       </div>
 
       <div className="card mb-1" style={{ padding: '0.75rem', backgroundColor: currentTheme.cardBg, border: `1px solid ${currentTheme.cardBorder}` }}>
-        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem', color: currentTheme.text }}>Por Status</h3>
+        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem', color: currentTheme.text }}>By Status</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {Object.entries(analytics.articlesByStatus).map(([status, count]) => (
             <div key={status} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -188,14 +182,14 @@ export default function AnalyticsWidget() {
       </div>
 
       <div className="card" style={{ padding: '0.75rem', backgroundColor: currentTheme.cardBg, border: `1px solid ${currentTheme.cardBorder}` }}>
-        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem', color: currentTheme.text }}>Organização</h3>
+        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem', color: currentTheme.text }}>Organization</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.85rem', color: currentTheme.text }}>Highlights</span>
             <span style={{ fontSize: '0.85rem', fontWeight: 600, color: currentTheme.text }}>{analytics.totalHighlights}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.85rem', color: currentTheme.text }}>Coleções</span>
+            <span style={{ fontSize: '0.85rem', color: currentTheme.text }}>Collections</span>
             <span style={{ fontSize: '0.85rem', fontWeight: 600, color: currentTheme.text }}>{analytics.totalCollections}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

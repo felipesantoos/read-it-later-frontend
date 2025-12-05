@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import InboxWidget from './pages/InboxWidget';
 import ReadingNowWidget from './pages/ReadingNowWidget';
 import FavoritesWidget from './pages/FavoritesWidget';
@@ -36,7 +37,8 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
+        <ThemeProvider>
+          <Routes>
           <Route
             path="/inbox"
             element={
@@ -90,6 +92,7 @@ function App() {
             element={<HomePage />}
           />
         </Routes>
+        </ThemeProvider>
       </AuthProvider>
     </BrowserRouter>
   );

@@ -4,6 +4,8 @@ import Toast from './Toast';
 import type { Theme } from '../utils/themeStyles';
 import { themeStyles } from '../utils/themeStyles';
 import { restoreSelectionFromPosition } from '../utils/highlightUtils';
+import Button from './Button';
+import { X, Pencil, MessageSquare, Plus } from 'lucide-react';
 import '../App.css';
 
 interface HighlightsManagerProps {
@@ -96,23 +98,23 @@ export default function HighlightsManager({
       setAllHighlights(response.data || []);
     } catch (error) {
       console.error('Error loading highlights:', error);
-      setMessage({ text: 'Erro ao carregar highlights', type: 'error' });
+      setMessage({ text: 'Error loading highlights', type: 'error' });
     } finally {
       setLoading(false);
     }
   }
 
   async function handleDeleteHighlight(highlightId: string) {
-    if (!confirm('Tem certeza que deseja deletar este highlight?')) return;
+    if (!confirm('Are you sure you want to delete this highlight?')) return;
 
     try {
       await highlightsApi.delete(highlightId);
       await loadHighlights();
       onUpdate?.();
-      setMessage({ text: 'Highlight deletado', type: 'success' });
+      setMessage({ text: 'Highlight deleted', type: 'success' });
     } catch (error) {
       console.error('Error deleting highlight:', error);
-      setMessage({ text: 'Erro ao deletar highlight', type: 'error' });
+      setMessage({ text: 'Error deleting highlight', type: 'error' });
     }
   }
 
@@ -129,13 +131,13 @@ export default function HighlightsManager({
           range.getBoundingClientRect();
           range.startContainer.parentElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-        setMessage({ text: 'Navegando para highlight...', type: 'info' });
+        setMessage({ text: 'Navigating to highlight...', type: 'info' });
       } else {
-        setMessage({ text: 'Não foi possível localizar o highlight no artigo', type: 'error' });
+        setMessage({ text: 'Could not locate highlight in article', type: 'error' });
       }
     } catch (error) {
       console.error('Error navigating to highlight:', error);
-      setMessage({ text: 'Erro ao navegar para highlight', type: 'error' });
+      setMessage({ text: 'Error navigating to highlight', type: 'error' });
     }
   }
 
@@ -151,12 +153,12 @@ export default function HighlightsManager({
       await highlightsApi.createNote(highlightForNote, noteContent.trim());
       await loadHighlights();
       onUpdate?.();
-      setMessage({ text: 'Nota adicionada', type: 'success' });
+      setMessage({ text: 'Note added', type: 'success' });
       setHighlightForNote(null);
       setNoteContent('');
     } catch (error) {
       console.error('Error creating note:', error);
-      setMessage({ text: 'Erro ao adicionar nota', type: 'error' });
+      setMessage({ text: 'Error adding note', type: 'error' });
     }
   }
 
@@ -172,26 +174,26 @@ export default function HighlightsManager({
       await highlightsApi.updateNote(editingNoteId, noteContent.trim());
       await loadHighlights();
       onUpdate?.();
-      setMessage({ text: 'Nota atualizada', type: 'success' });
+      setMessage({ text: 'Note updated', type: 'success' });
       setEditingNoteId(null);
       setNoteContent('');
     } catch (error) {
       console.error('Error updating note:', error);
-      setMessage({ text: 'Erro ao atualizar nota', type: 'error' });
+      setMessage({ text: 'Error updating note', type: 'error' });
     }
   }
 
   async function handleDeleteNote(noteId: string) {
-    if (!confirm('Tem certeza que deseja deletar esta nota?')) return;
+    if (!confirm('Are you sure you want to delete this note?')) return;
 
     try {
       await highlightsApi.deleteNote(noteId);
       await loadHighlights();
       onUpdate?.();
-      setMessage({ text: 'Nota deletada', type: 'success' });
+      setMessage({ text: 'Note deleted', type: 'success' });
     } catch (error) {
       console.error('Error deleting note:', error);
-      setMessage({ text: 'Erro ao deletar nota', type: 'error' });
+      setMessage({ text: 'Error deleting note', type: 'error' });
     }
   }
 
@@ -210,20 +212,18 @@ export default function HighlightsManager({
           />
         )}
         <div style={{ position: 'relative' }} data-popover-container>
-          <button
+          <Button
             ref={buttonRef}
+            variant="ghost"
+            size="sm"
             onClick={() => setShowPopover(!showPopover)}
+            title="Manage highlights"
             style={{
-              padding: '0.25rem 0.5rem',
-              fontSize: '0.75rem',
+              position: 'relative',
               backgroundColor: currentTheme.buttonBg,
               border: `1px solid ${currentTheme.cardBorder}`,
-              borderRadius: '4px',
-              cursor: 'pointer',
               color: currentTheme.text,
-              position: 'relative',
             }}
-            title="Gerenciar highlights"
           >
             Highlights
             {allHighlights.length > 0 && (
@@ -246,7 +246,7 @@ export default function HighlightsManager({
                 {allHighlights.length}
               </span>
             )}
-          </button>
+          </Button>
           {showPopover && popoverPosition && (
             <>
               <div
@@ -293,10 +293,10 @@ export default function HighlightsManager({
                   padding: '0.5rem',
                 }}>
                   {loading ? (
-                    <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, textAlign: 'center' }}>Carregando...</p>
+                    <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, textAlign: 'center' }}>Loading...</p>
                   ) : allHighlights.length === 0 ? (
                     <p style={{ fontSize: '0.75rem', color: currentTheme.secondaryText, textAlign: 'center' }}>
-                      Nenhum highlight ainda
+                      No highlights yet
                     </p>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -321,25 +321,18 @@ export default function HighlightsManager({
                                 cursor: highlight.position ? 'pointer' : 'default',
                               }}
                               onClick={() => highlight.position && handleNavigateToHighlight(highlight)}
-                              title={highlight.position ? 'Clique para navegar' : ''}
+                              title={highlight.position ? 'Click to navigate' : ''}
                             >
                               "{highlight.text.length > 100 ? highlight.text.substring(0, 100) + '...' : highlight.text}"
                             </p>
-                            <button
+                            <Button
+                              variant="icon"
+                              size="sm"
+                              icon={<X size={14} />}
                               onClick={() => handleDeleteHighlight(highlight.id)}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                color: '#dc3545',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                padding: '0 0.25rem',
-                                flexShrink: 0,
-                              }}
-                              title="Deletar highlight"
-                            >
-                              ×
-                            </button>
+                              title="Delete highlight"
+                              style={{ color: '#dc3545', padding: '0 0.25rem', flexShrink: 0 }}
+                            />
                           </div>
                           
                           {/* Notes section */}
@@ -367,7 +360,9 @@ export default function HighlightsManager({
                                         autoFocus
                                       />
                                       <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'flex-end' }}>
-                                        <button
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
                                           onClick={() => {
                                             setEditingNoteId(null);
                                             setNoteContent('');
@@ -376,66 +371,45 @@ export default function HighlightsManager({
                                             padding: '0.15rem 0.5rem',
                                             fontSize: '0.7rem',
                                             backgroundColor: currentTheme.buttonBg,
-                                            color: currentTheme.text,
                                             border: `1px solid ${currentTheme.cardBorder}`,
-                                            borderRadius: '4px',
-                                            cursor: 'pointer',
+                                            color: currentTheme.text,
                                           }}
                                         >
-                                          Cancelar
-                                        </button>
-                                        <button
+                                          Cancel
+                                        </Button>
+                                        <Button
+                                          variant="primary"
+                                          size="sm"
                                           onClick={handleUpdateNote}
                                           disabled={!noteContent.trim()}
-                                          style={{
-                                            padding: '0.15rem 0.5rem',
-                                            fontSize: '0.7rem',
-                                            backgroundColor: '#007bff',
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '4px',
-                                            cursor: noteContent.trim() ? 'pointer' : 'not-allowed',
-                                            opacity: noteContent.trim() ? 1 : 0.5,
-                                          }}
+                                          style={{ padding: '0.15rem 0.5rem', fontSize: '0.7rem' }}
                                         >
-                                          Salvar
-                                        </button>
+                                          Save
+                                        </Button>
                                       </div>
                                     </div>
                                   ) : (
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.25rem' }}>
-                                      <p style={{ fontSize: '0.7rem', margin: 0, color: currentTheme.secondaryText, flex: 1 }}>
-                                        💬 {note.content}
+                                      <p style={{ fontSize: '0.7rem', margin: 0, color: currentTheme.secondaryText, flex: 1, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                        <MessageSquare size={12} /> {note.content}
                                       </p>
                                       <div style={{ display: 'flex', gap: '0.15rem' }}>
-                                        <button
+                                        <Button
+                                          variant="icon"
+                                          size="sm"
+                                          icon={<Pencil size={12} />}
                                           onClick={() => handleEditNote(note.id, note.content)}
-                                          style={{
-                                            background: 'none',
-                                            border: 'none',
-                                            color: '#007bff',
-                                            cursor: 'pointer',
-                                            fontSize: '0.8rem',
-                                            padding: '0 0.15rem',
-                                          }}
-                                          title="Editar nota"
-                                        >
-                                          ✏️
-                                        </button>
-                                        <button
+                                          title="Edit note"
+                                          style={{ color: '#007bff', padding: '0 0.15rem' }}
+                                        />
+                                        <Button
+                                          variant="icon"
+                                          size="sm"
+                                          icon={<X size={12} />}
                                           onClick={() => handleDeleteNote(note.id)}
-                                          style={{
-                                            background: 'none',
-                                            border: 'none',
-                                            color: '#dc3545',
-                                            cursor: 'pointer',
-                                            fontSize: '0.8rem',
-                                            padding: '0 0.15rem',
-                                          }}
-                                          title="Deletar nota"
-                                        >
-                                          ×
-                                        </button>
+                                          title="Delete note"
+                                          style={{ color: '#dc3545', padding: '0 0.15rem' }}
+                                        />
                                       </div>
                                     </div>
                                   )}
@@ -450,7 +424,7 @@ export default function HighlightsManager({
                               <textarea
                                 value={noteContent}
                                 onChange={(e) => setNoteContent(e.target.value)}
-                                placeholder="Adicionar nota..."
+                                placeholder="Add note..."
                                 style={{
                                   width: '100%',
                                   minHeight: '40px',
@@ -466,7 +440,9 @@ export default function HighlightsManager({
                                 autoFocus
                               />
                               <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'flex-end', marginTop: '0.25rem' }}>
-                                <button
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={() => {
                                     setHighlightForNote(null);
                                     setNoteContent('');
@@ -475,48 +451,40 @@ export default function HighlightsManager({
                                     padding: '0.15rem 0.5rem',
                                     fontSize: '0.7rem',
                                     backgroundColor: currentTheme.buttonBg,
-                                    color: currentTheme.text,
                                     border: `1px solid ${currentTheme.cardBorder}`,
-                                    borderRadius: '4px',
-                                    cursor: 'pointer',
+                                    color: currentTheme.text,
                                   }}
                                 >
                                   Cancelar
-                                </button>
-                                <button
+                                </Button>
+                                <Button
+                                  variant="primary"
+                                  size="sm"
                                   onClick={handleSaveNote}
                                   disabled={!noteContent.trim()}
-                                  style={{
-                                    padding: '0.15rem 0.5rem',
-                                    fontSize: '0.7rem',
-                                    backgroundColor: '#007bff',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: noteContent.trim() ? 'pointer' : 'not-allowed',
-                                    opacity: noteContent.trim() ? 1 : 0.5,
-                                  }}
+                                  style={{ padding: '0.15rem 0.5rem', fontSize: '0.7rem' }}
                                 >
                                   Salvar
-                                </button>
+                                </Button>
                               </div>
                             </div>
                           ) : (
                             <div style={{ marginTop: '0.5rem' }}>
-                              <button
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                icon={<Plus size={12} />}
                                 onClick={() => handleAddNote(highlight.id)}
                                 style={{
                                   padding: '0.15rem 0.5rem',
                                   fontSize: '0.7rem',
                                   backgroundColor: 'transparent',
                                   color: '#007bff',
-                                  border: 'none',
-                                  cursor: 'pointer',
                                   textDecoration: 'underline',
                                 }}
                               >
-                                + Adicionar nota
-                              </button>
+                                Add note
+                              </Button>
                             </div>
                           )}
                         </div>

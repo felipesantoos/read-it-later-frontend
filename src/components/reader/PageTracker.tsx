@@ -3,6 +3,8 @@ import type { Article } from '../../api/articles';
 import { validatePages } from '../../utils/validation';
 import type { Theme } from '../../utils/themeStyles';
 import { themeStyles } from '../../utils/themeStyles';
+import Button from '../Button';
+import { ChevronLeft, ChevronRight, Pencil, Plus } from 'lucide-react';
 
 interface PageTrackerProps {
   article: Article;
@@ -42,7 +44,7 @@ export default function PageTracker({ article, onPageChange, onPagesUpdate, onEr
 
     const validation = validatePages(totalPages, currentPage);
     if (!validation.isValid) {
-      onError(validation.error || 'Erro de validação');
+      onError(validation.error || 'Validation error');
       return;
     }
 
@@ -80,7 +82,7 @@ export default function PageTracker({ article, onPageChange, onPagesUpdate, onEr
         />
       </label>
       <label style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.2rem', color: currentTheme.text }}>
-        Atual:
+        Current:
         <input
           type="number"
           min="0"
@@ -103,7 +105,7 @@ export default function PageTracker({ article, onPageChange, onPagesUpdate, onEr
         className="primary"
         style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}
       >
-        Salvar
+        Save
       </button>
       <button
         onClick={handleCancel}
@@ -114,7 +116,7 @@ export default function PageTracker({ article, onPageChange, onPagesUpdate, onEr
           color: currentTheme.text
         }}
       >
-        Cancelar
+        Cancel
       </button>
     </div>
   );
@@ -125,7 +127,7 @@ export default function PageTracker({ article, onPageChange, onPagesUpdate, onEr
         {!isEditingPages ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <div style={{ fontSize: '0.85rem', fontWeight: 500, color: currentTheme.text }}>
-              Página {article.currentPage || 0} de {article.totalPages}
+              Page {article.currentPage || 0} of {article.totalPages}
               {article.currentPage && article.totalPages && (
                 <span style={{ color: currentTheme.secondaryText, marginLeft: '0.4rem', fontSize: '0.8rem' }}>
                   ({Math.round(((article.currentPage || 0) / article.totalPages) * 100)}%)
@@ -133,20 +135,19 @@ export default function PageTracker({ article, onPageChange, onPagesUpdate, onEr
               )}
             </div>
             <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<ChevronLeft size={14} />}
                 onClick={() => article.currentPage && onPageChange(Math.max(0, article.currentPage - 1))}
                 disabled={!article.currentPage || article.currentPage <= 0}
-                style={{
-                  padding: '0.2rem 0.4rem',
+                style={{ 
+                  padding: '0.2rem 0.4rem', 
                   fontSize: '0.75rem',
-                  opacity: (!article.currentPage || article.currentPage <= 0) ? 0.5 : 1,
-                  cursor: (!article.currentPage || article.currentPage <= 0) ? 'not-allowed' : 'pointer',
                   backgroundColor: currentTheme.buttonBg,
                   color: currentTheme.text
                 }}
-              >
-                ←
-              </button>
+              />
               <input
                 type="number"
                 min="0"
@@ -168,21 +169,23 @@ export default function PageTracker({ article, onPageChange, onPagesUpdate, onEr
                   color: currentTheme.text
                 }}
               />
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<ChevronRight size={14} />}
                 onClick={() => article.currentPage !== null && onPageChange(Math.min(article.totalPages!, article.currentPage + 1))}
                 disabled={!article.currentPage || article.currentPage >= article.totalPages}
-                style={{
-                  padding: '0.2rem 0.4rem',
+                style={{ 
+                  padding: '0.2rem 0.4rem', 
                   fontSize: '0.75rem',
-                  opacity: (!article.currentPage || article.currentPage >= article.totalPages) ? 0.5 : 1,
-                  cursor: (!article.currentPage || article.currentPage >= article.totalPages) ? 'not-allowed' : 'pointer',
                   backgroundColor: currentTheme.buttonBg,
                   color: currentTheme.text
                 }}
-              >
-                →
-              </button>
-              <button
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Pencil size={12} />}
                 onClick={() => setIsEditingPages(true)}
                 style={{ 
                   padding: '0.2rem 0.4rem', 
@@ -190,9 +193,7 @@ export default function PageTracker({ article, onPageChange, onPagesUpdate, onEr
                   backgroundColor: currentTheme.buttonBg,
                   color: currentTheme.text
                 }}
-              >
-                ✏️
-              </button>
+              />
             </div>
           </div>
         ) : (
@@ -206,8 +207,11 @@ export default function PageTracker({ article, onPageChange, onPagesUpdate, onEr
     <div style={{ padding: '0', marginBottom: '0' }}>
       {!isEditingPages ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <span style={{ fontSize: '0.8rem', color: currentTheme.secondaryText }}>Rastreamento de páginas não configurado</span>
-          <button
+          <span style={{ fontSize: '0.8rem', color: currentTheme.secondaryText }}>Page tracking not configured</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<Plus size={12} />}
             onClick={() => setIsEditingPages(true)}
             style={{ 
               padding: '0.2rem 0.4rem', 
@@ -216,8 +220,8 @@ export default function PageTracker({ article, onPageChange, onPagesUpdate, onEr
               color: currentTheme.text
             }}
           >
-            ➕ Adicionar
-          </button>
+            Add
+          </Button>
         </div>
       ) : (
         <PageEditForm />

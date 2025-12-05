@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { articlesApi } from '../api/articles';
+import Button from '../components/Button';
+import { Inbox, Copy, BookOpen, Star, Sparkles, BarChart } from 'lucide-react';
 import '../App.css';
 
 export default function HomePage() {
@@ -68,7 +70,7 @@ export default function HomePage() {
   function openWidget(path: string) {
     const currentToken = getToken();
     if (!currentToken) {
-      setMessage({ text: 'Token não encontrado. Adicione ?token=SEU_TOKEN na URL.', type: 'error' });
+      setMessage({ text: 'Token not found. Add ?token=YOUR_TOKEN to the URL.', type: 'error' });
       return;
     }
 
@@ -79,7 +81,7 @@ export default function HomePage() {
   function copyLink(path: string) {
     const currentToken = getToken();
     if (!currentToken) {
-      setMessage({ text: 'Token não encontrado. Adicione ?token=SEU_TOKEN na URL.', type: 'error' });
+      setMessage({ text: 'Token not found. Add ?token=YOUR_TOKEN to the URL.', type: 'error' });
       return;
     }
 
@@ -87,7 +89,7 @@ export default function HomePage() {
     
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(url).then(() => {
-        setMessage({ text: 'Link copiado para a área de transferência!', type: 'success' });
+        setMessage({ text: 'Link copied to clipboard!', type: 'success' });
       }).catch(() => {
         setMessage({ text: `Link: ${url}`, type: 'info' });
       });
@@ -105,7 +107,7 @@ export default function HomePage() {
       {!currentToken && (
         <div className="card mb-1" style={{ padding: '0.5rem' }}>
           <p style={{ fontSize: '0.85rem', margin: 0, color: '#666' }}>
-            Token não encontrado. Adicione ?token=SEU_TOKEN na URL.
+            Token not found. Add ?token=YOUR_TOKEN to the URL.
           </p>
         </div>
       )}
@@ -119,9 +121,9 @@ export default function HomePage() {
           borderRadius: '6px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-            <span style={{ fontSize: '1rem' }}>📖</span>
+            <BookOpen size={20} style={{ color: '#007bff' }} />
             <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#007bff' }}>
-              Sessão de leitura ativa:
+              Active reading session:
             </span>
           </div>
           <div style={{ marginLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -153,43 +155,29 @@ export default function HomePage() {
         <div className="card" style={{ padding: '0.5rem' }}>
           <div className="flex-between gap-1" style={{ alignItems: 'center' }}>
             <div className="flex gap-1" style={{ alignItems: 'center', flex: 1, minWidth: 0 }}>
-              <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>📥</span>
+              <Inbox size={20} style={{ flexShrink: 0 }} />
               <span style={{ fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 Inbox
               </span>
             </div>
             <div className="flex gap-1" style={{ flexShrink: 0 }}>
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Copy size={14} />}
                 onClick={() => copyLink('/inbox')}
                 disabled={!currentToken}
-                title="Copiar link"
-                style={{
-                  padding: '0.25rem 0.5rem',
-                  fontSize: '0.75rem',
-                  cursor: currentToken ? 'pointer' : 'not-allowed',
-                  opacity: currentToken ? 1 : 0.6,
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                }}
-              >
-                📋
-              </button>
-              <button
-                className="primary"
+                title="Copy link"
+              />
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => openWidget('/inbox')}
                 disabled={!currentToken}
-                title="Abrir widget"
-                style={{
-                  padding: '0.25rem 0.5rem',
-                  fontSize: '0.75rem',
-                  cursor: currentToken ? 'pointer' : 'not-allowed',
-                  opacity: currentToken ? 1 : 0.6,
-                }}
+                title="Open widget"
               >
-                Abrir
-              </button>
+                Open
+              </Button>
             </div>
           </div>
         </div>
@@ -197,43 +185,29 @@ export default function HomePage() {
         <div className="card" style={{ padding: '0.5rem' }}>
           <div className="flex-between gap-1" style={{ alignItems: 'center' }}>
             <div className="flex gap-1" style={{ alignItems: 'center', flex: 1, minWidth: 0 }}>
-              <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>📖</span>
+              <BookOpen size={20} style={{ flexShrink: 0 }} />
               <span style={{ fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                Lendo Agora
+                Reading Now
               </span>
             </div>
             <div className="flex gap-1" style={{ flexShrink: 0 }}>
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Copy size={14} />}
                 onClick={() => copyLink('/reading-now')}
                 disabled={!currentToken}
-                title="Copiar link"
-                style={{
-                  padding: '0.25rem 0.5rem',
-                  fontSize: '0.75rem',
-                  cursor: currentToken ? 'pointer' : 'not-allowed',
-                  opacity: currentToken ? 1 : 0.6,
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                }}
-              >
-                📋
-              </button>
-              <button
-                className="primary"
+                title="Copy link"
+              />
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => openWidget('/reading-now')}
                 disabled={!currentToken}
-                title="Abrir widget"
-                style={{
-                  padding: '0.25rem 0.5rem',
-                  fontSize: '0.75rem',
-                  cursor: currentToken ? 'pointer' : 'not-allowed',
-                  opacity: currentToken ? 1 : 0.6,
-                }}
+                title="Open widget"
               >
-                Abrir
-              </button>
+                Open
+              </Button>
             </div>
           </div>
         </div>
@@ -241,43 +215,29 @@ export default function HomePage() {
         <div className="card" style={{ padding: '0.5rem' }}>
           <div className="flex-between gap-1" style={{ alignItems: 'center' }}>
             <div className="flex gap-1" style={{ alignItems: 'center', flex: 1, minWidth: 0 }}>
-              <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>⭐</span>
+              <Star size={20} style={{ flexShrink: 0 }} />
               <span style={{ fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                Favoritos
+                Favorites
               </span>
             </div>
             <div className="flex gap-1" style={{ flexShrink: 0 }}>
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Copy size={14} />}
                 onClick={() => copyLink('/favorites')}
                 disabled={!currentToken}
-                title="Copiar link"
-                style={{
-                  padding: '0.25rem 0.5rem',
-                  fontSize: '0.75rem',
-                  cursor: currentToken ? 'pointer' : 'not-allowed',
-                  opacity: currentToken ? 1 : 0.6,
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                }}
-              >
-                📋
-              </button>
-              <button
-                className="primary"
+                title="Copy link"
+              />
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => openWidget('/favorites')}
                 disabled={!currentToken}
-                title="Abrir widget"
-                style={{
-                  padding: '0.25rem 0.5rem',
-                  fontSize: '0.75rem',
-                  cursor: currentToken ? 'pointer' : 'not-allowed',
-                  opacity: currentToken ? 1 : 0.6,
-                }}
+                title="Open widget"
               >
-                Abrir
-              </button>
+                Open
+              </Button>
             </div>
           </div>
         </div>
@@ -285,43 +245,29 @@ export default function HomePage() {
         <div className="card" style={{ padding: '0.5rem' }}>
           <div className="flex-between gap-1" style={{ alignItems: 'center' }}>
             <div className="flex gap-1" style={{ alignItems: 'center', flex: 1, minWidth: 0 }}>
-              <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>✨</span>
+              <Sparkles size={20} style={{ flexShrink: 0 }} />
               <span style={{ fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 Highlights
               </span>
             </div>
             <div className="flex gap-1" style={{ flexShrink: 0 }}>
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Copy size={14} />}
                 onClick={() => copyLink('/highlights')}
                 disabled={!currentToken}
-                title="Copiar link"
-                style={{
-                  padding: '0.25rem 0.5rem',
-                  fontSize: '0.75rem',
-                  cursor: currentToken ? 'pointer' : 'not-allowed',
-                  opacity: currentToken ? 1 : 0.6,
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                }}
-              >
-                📋
-              </button>
-              <button
-                className="primary"
+                title="Copy link"
+              />
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => openWidget('/highlights')}
                 disabled={!currentToken}
-                title="Abrir widget"
-                style={{
-                  padding: '0.25rem 0.5rem',
-                  fontSize: '0.75rem',
-                  cursor: currentToken ? 'pointer' : 'not-allowed',
-                  opacity: currentToken ? 1 : 0.6,
-                }}
+                title="Open widget"
               >
-                Abrir
-              </button>
+                Open
+              </Button>
             </div>
           </div>
         </div>
@@ -329,43 +275,29 @@ export default function HomePage() {
         <div className="card" style={{ padding: '0.5rem' }}>
           <div className="flex-between gap-1" style={{ alignItems: 'center' }}>
             <div className="flex gap-1" style={{ alignItems: 'center', flex: 1, minWidth: 0 }}>
-              <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>📊</span>
+              <BarChart size={20} style={{ flexShrink: 0 }} />
               <span style={{ fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                Estatísticas
+                Statistics
               </span>
             </div>
             <div className="flex gap-1" style={{ flexShrink: 0 }}>
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Copy size={14} />}
                 onClick={() => copyLink('/analytics')}
                 disabled={!currentToken}
-                title="Copiar link"
-                style={{
-                  padding: '0.25rem 0.5rem',
-                  fontSize: '0.75rem',
-                  cursor: currentToken ? 'pointer' : 'not-allowed',
-                  opacity: currentToken ? 1 : 0.6,
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                }}
-              >
-                📋
-              </button>
-              <button
-                className="primary"
+                title="Copy link"
+              />
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => openWidget('/analytics')}
                 disabled={!currentToken}
-                title="Abrir widget"
-                style={{
-                  padding: '0.25rem 0.5rem',
-                  fontSize: '0.75rem',
-                  cursor: currentToken ? 'pointer' : 'not-allowed',
-                  opacity: currentToken ? 1 : 0.6,
-                }}
+                title="Open widget"
               >
-                Abrir
-              </button>
+                Open
+              </Button>
             </div>
           </div>
         </div>

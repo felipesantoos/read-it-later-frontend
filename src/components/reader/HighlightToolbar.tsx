@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { themeStyles } from '../../utils/themeStyles';
 import type { Theme } from '../../utils/themeStyles';
 import { captureSelectionInfo, getToolbarPosition, type SelectionInfo } from '../../utils/highlightUtils';
+import Button from '../Button';
+import { Sparkles, MessageSquare } from 'lucide-react';
 
 interface HighlightToolbarProps {
   articleId: string;
@@ -263,7 +265,7 @@ export default function HighlightToolbar({
           <textarea
             value={noteContent}
             onChange={(e) => setNoteContent(e.target.value)}
-            placeholder="Adicionar nota..."
+            placeholder="Add note..."
             style={{
               width: '100%',
               minHeight: '60px',
@@ -293,7 +295,7 @@ export default function HighlightToolbar({
                 opacity: isCreating ? 0.5 : 1,
               }}
             >
-              Cancelar
+              Cancel
             </button>
             <button
               onClick={handleHighlightWithNote}
@@ -309,54 +311,38 @@ export default function HighlightToolbar({
                 opacity: noteContent.trim() && !isCreating ? 1 : 0.5,
               }}
             >
-              {isCreating ? 'Salvando...' : 'Salvar'}
+              {isCreating ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>
       ) : (
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <button
+          <Button
+            variant="primary"
+            size="sm"
+            icon={<Sparkles size={14} />}
             onClick={handleHighlight}
             disabled={isCreating}
-            style={{
-              padding: '0.375rem 0.75rem',
-              fontSize: '0.75rem',
+            title="Create highlight"
+            style={{ 
               backgroundColor: '#ffc107',
               color: '#000',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: isCreating ? 'not-allowed' : 'pointer',
-              opacity: isCreating ? 0.5 : 1,
-              fontWeight: 500,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.25rem',
+              fontWeight: 500
             }}
-            title="Criar highlight"
           >
-            ✨ Highlight
-          </button>
-          <button
+            Highlight
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            icon={<MessageSquare size={14} />}
             onClick={handleShowNoteInput}
             disabled={isCreating}
-            style={{
-              padding: '0.375rem 0.75rem',
-              fontSize: '0.75rem',
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: isCreating ? 'not-allowed' : 'pointer',
-              opacity: isCreating ? 0.5 : 1,
-              fontWeight: 500,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.25rem',
-            }}
-            title="Criar highlight com nota"
+            title="Create highlight with note"
+            style={{ fontWeight: 500 }}
           >
-            💬 Add Note
-          </button>
+            Add Note
+          </Button>
         </div>
       )}
     </div>

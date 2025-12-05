@@ -11,6 +11,8 @@ import { useScrollProgress } from '../hooks/useScrollProgress';
 import { useTTS } from '../hooks/useTTS';
 import { validatePageChange } from '../utils/validation';
 import { themeStyles } from '../utils/themeStyles';
+import { useTheme } from '../contexts/ThemeContext';
+import Button from '../components/Button';
 import '../App.css';
 
 export default function ReaderWidget() {
@@ -22,7 +24,7 @@ export default function ReaderWidget() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [fontSize, setFontSize] = useState(24);
   const [lineHeight, setLineHeight] = useState(1.5);
-  const [theme, setTheme] = useState<'light' | 'dark' | 'sepia'>('sepia');
+  const { theme, setTheme } = useTheme();
   const contentRef = useRef<HTMLDivElement | null>(null) as MutableRefObject<HTMLDivElement | null>;
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -97,7 +99,7 @@ export default function ReaderWidget() {
       setArticle(response.data);
     } catch (error) {
       console.error('Error loading article:', error);
-      setMessage({ text: 'Erro ao carregar artigo', type: 'error' });
+      setMessage({ text: 'Error loading article', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -128,10 +130,10 @@ export default function ReaderWidget() {
         currentPage: currentPage,
       });
       updateArticleState(response.data);
-      setMessage({ text: 'Páginas atualizadas!', type: 'success' });
+      setMessage({ text: 'Pages updated!', type: 'success' });
     } catch (error) {
       console.error('Error updating pages:', error);
-      setMessage({ text: 'Erro ao atualizar páginas', type: 'error' });
+      setMessage({ text: 'Error updating pages', type: 'error' });
       throw error;
     }
   }
@@ -148,10 +150,10 @@ export default function ReaderWidget() {
     try {
       const response = await articlesApi.updateReadingProgressByPage(article.id, newPage);
       updateArticleState(response.data);
-      setMessage({ text: 'Página atualizada!', type: 'success' });
+      setMessage({ text: 'Page updated!', type: 'success' });
     } catch (error) {
       console.error('Error updating page:', error);
-      setMessage({ text: 'Erro ao atualizar página', type: 'error' });
+      setMessage({ text: 'Error updating page', type: 'error' });
     }
   }
 
@@ -176,11 +178,11 @@ export default function ReaderWidget() {
         text: text,
         position: position,
       });
-      setMessage({ text: 'Highlight criado!', type: 'success' });
+      setMessage({ text: 'Highlight created!', type: 'success' });
       await loadHighlights();
     } catch (error) {
       console.error('Error creating highlight:', error);
-      setMessage({ text: 'Erro ao criar highlight', type: 'error' });
+      setMessage({ text: 'Error creating highlight', type: 'error' });
       throw error;
     }
   }
@@ -199,14 +201,14 @@ export default function ReaderWidget() {
       // Then create note
       await highlightsApi.createNote(highlightResponse.data.id, noteContent);
       
-      setMessage({ text: 'Highlight com nota criado!', type: 'success' });
+      setMessage({ text: 'Highlight with note created!', type: 'success' });
       
       // Reload highlights to get the updated highlight with note included
       // This ensures the highlight is loaded with its note from the start
       await loadHighlights();
     } catch (error) {
       console.error('Error creating highlight with note:', error);
-      setMessage({ text: 'Erro ao criar highlight com nota', type: 'error' });
+      setMessage({ text: 'Error creating highlight with note', type: 'error' });
       throw error;
     }
   }
@@ -226,10 +228,10 @@ export default function ReaderWidget() {
     try {
       const response = await articlesApi.update(article.id, { status: newStatus });
       updateArticleState(response.data);
-      setMessage({ text: 'Status atualizado!', type: 'success' });
+      setMessage({ text: 'Status updated!', type: 'success' });
     } catch (error) {
       console.error('Error updating status:', error);
-      setMessage({ text: 'Erro ao atualizar status', type: 'error' });
+      setMessage({ text: 'Error updating status', type: 'error' });
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -252,10 +254,10 @@ export default function ReaderWidget() {
         contentRef.current.scrollTop = 0;
       }
       
-      setMessage({ text: 'Progresso resetado!', type: 'success' });
+      setMessage({ text: 'Progress reset!', type: 'success' });
     } catch (error) {
       console.error('Error resetting progress:', error);
-      setMessage({ text: 'Erro ao resetar progresso', type: 'error' });
+      setMessage({ text: 'Error resetting progress', type: 'error' });
     }
   }
 
@@ -268,7 +270,7 @@ export default function ReaderWidget() {
   if (loading) {
     return (
       <div className="widget-container" style={{ backgroundColor: currentTheme.bg, color: currentTheme.text }}>
-        <p>Carregando...</p>
+        <p>Loading...</p>
       </div>
     );
   }
@@ -276,8 +278,8 @@ export default function ReaderWidget() {
   if (!article) {
     return (
       <div className="widget-container" style={{ backgroundColor: currentTheme.bg, color: currentTheme.text }}>
-        <p>Artigo não encontrado</p>
-        <button onClick={() => navigate('/inbox')}>Voltar</button>
+        <p>Article not found</p>
+        <Button variant="ghost" size="sm" onClick={() => navigate('/inbox')}>Back</Button>
       </div>
     );
   }
