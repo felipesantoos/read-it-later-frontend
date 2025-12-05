@@ -130,15 +130,9 @@ export default function HighlightsManager({
     if (!highlight.position || !contentRef?.current) return;
 
     try {
+      // restoreSelectionFromPosition already handles scrolling, so we don't need to scroll again
       const success = restoreSelectionFromPosition(highlight.position, contentRef.current, highlight.id);
       if (success) {
-        // Scroll to selection
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          range.getBoundingClientRect();
-          range.startContainer.parentElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
         setMessage({ text: 'Navigating to highlight...', type: 'info' });
       } else {
         setMessage({ text: 'Could not locate highlight in article', type: 'error' });

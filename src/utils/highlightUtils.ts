@@ -755,13 +755,49 @@ export function restoreSelectionFromPosition(
       const tokenIds = tokenPosition.tokenIds;
       
       if (tokenIds && tokenIds.length > 0) {
-        // Find all token spans by their IDs
+        // First, check if there's already a mark element for this highlight (most reliable)
+        if (highlightId) {
+          const markById = container.querySelector(`mark[data-highlight-id="${highlightId}"]`) as HTMLElement;
+          if (markById) {
+            // Scroll to the mark element
+            markById.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Create range to select the mark contents
+            const range = document.createRange();
+            if (markById.firstChild && markById.firstChild.nodeType === Node.TEXT_NODE) {
+              range.selectNodeContents(markById);
+            } else {
+              range.selectNode(markById);
+            }
+            
+            const selection = window.getSelection();
+            if (selection) {
+              selection.removeAllRanges();
+              selection.addRange(range);
+            }
+            
+            return true;
+          }
+        }
+        
+        // If no mark found, try to find token spans directly
+        // Note: token spans might be inside a mark element, so we search within the container
         const tokenSpans: HTMLElement[] = [];
         let allFound = true;
         
         for (const tokenId of tokenIds) {
-          const span = document.getElementById(tokenId);
-          if (span && span.id.startsWith('ritl-w-')) {
+          // Search within container first (more efficient)
+          const span = container.querySelector(`#${tokenId}`) as HTMLElement;
+          if (!span) {
+            // Fallback to document.getElementById if not found in container
+            const docSpan = document.getElementById(tokenId);
+            if (docSpan && container.contains(docSpan)) {
+              tokenSpans.push(docSpan);
+            } else {
+              allFound = false;
+              break;
+            }
+          } else if (span.id.startsWith('ritl-w-')) {
             tokenSpans.push(span);
           } else {
             allFound = false;
@@ -779,8 +815,31 @@ export function restoreSelectionFromPosition(
             });
           }
           
-          // Create range from first to last span
+          // Check if spans are inside a mark element (highlighted)
           const firstSpan = tokenSpans[0];
+          const markElement = firstSpan.closest('mark[data-highlight-id]') as HTMLElement;
+          
+          if (markElement) {
+            // If inside a mark, scroll to and select the mark
+            markElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            const range = document.createRange();
+            if (markElement.firstChild && markElement.firstChild.nodeType === Node.TEXT_NODE) {
+              range.selectNodeContents(markElement);
+            } else {
+              range.selectNode(markElement);
+            }
+            
+            const selection = window.getSelection();
+            if (selection) {
+              selection.removeAllRanges();
+              selection.addRange(range);
+            }
+            
+            return true;
+          }
+          
+          // If not inside a mark, create range from first to last span
           const lastSpan = tokenSpans[tokenSpans.length - 1];
           
           const range = document.createRange();
@@ -808,11 +867,8 @@ export function restoreSelectionFromPosition(
             range.setEndAfter(lastSpan);
           }
           
-          // Scroll to the range
-          const rect = range.getBoundingClientRect();
-          if (rect.height > 0) {
-            firstSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
+          // Scroll to the first span
+          firstSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
           
           // Apply selection
           const selection = window.getSelection();
