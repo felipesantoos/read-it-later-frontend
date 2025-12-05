@@ -36,6 +36,7 @@ interface ReaderHeaderProps {
   contentRef?: MutableRefObject<HTMLDivElement | null>;
   onRefresh?: () => void;
   tts?: UseTTSReturn;
+  onToggleTTSBar?: () => void;
 }
 
 export default function ReaderHeader({ 
@@ -60,7 +61,8 @@ export default function ReaderHeader({
   onHighlightsUpdate,
   contentRef,
   onRefresh,
-  tts
+  tts,
+  onToggleTTSBar
 }: ReaderHeaderProps) {
   const navigate = useNavigate();
   const currentTheme = themeStyles[theme];
@@ -451,6 +453,7 @@ export default function ReaderHeader({
             tts={tts}
             theme={theme}
             compact={true}
+            onToggleFixedBar={onToggleTTSBar}
           />
         )}
 

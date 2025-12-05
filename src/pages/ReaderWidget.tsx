@@ -6,6 +6,7 @@ import Toast from '../components/Toast';
 import ReaderHeader from '../components/reader/ReaderHeader';
 import ArticleContent from '../components/reader/ArticleContent';
 import HighlightToolbar from '../components/reader/HighlightToolbar';
+import TTSControls from '../components/reader/TTSControls';
 import { useScrollProgress } from '../hooks/useScrollProgress';
 import { useTTS } from '../hooks/useTTS';
 import { validatePageChange } from '../utils/validation';
@@ -25,6 +26,7 @@ export default function ReaderWidget() {
   const contentRef = useRef<HTMLDivElement | null>(null) as MutableRefObject<HTMLDivElement | null>;
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [showTTSBar, setShowTTSBar] = useState(false);
 
   // Função para atualizar estado local sem recarregar o artigo inteiro
   const updateArticleState = (updates: Partial<Article>) => {
@@ -259,6 +261,10 @@ export default function ReaderWidget() {
 
   const currentTheme = themeStyles[theme];
 
+  const handleToggleTTSBar = () => {
+    setShowTTSBar(prev => !prev);
+  };
+
   if (loading) {
     return (
       <div className="widget-container" style={{ backgroundColor: currentTheme.bg, color: currentTheme.text }}>
@@ -321,11 +327,20 @@ export default function ReaderWidget() {
           contentRef={contentRef}
           onRefresh={handleRefresh}
           tts={tts}
+          onToggleTTSBar={handleToggleTTSBar}
         />
       </div>
 
       {/* Article Content */}
-      <div style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
+      <div 
+        style={{ 
+          position: 'relative', 
+          flex: 1, 
+          overflow: 'hidden',
+          paddingBottom: showTTSBar ? '80px' : '0',
+          transition: 'padding-bottom 0.3s ease',
+        }}
+      >
         <ArticleContent
           article={article}
           contentRef={contentRef}
@@ -344,6 +359,16 @@ export default function ReaderWidget() {
           contentRef={contentRef}
         />
       </div>
+
+      {/* Fixed TTS Bar */}
+      {showTTSBar && (
+        <TTSControls
+          tts={tts}
+          theme={theme}
+          fixedBar={true}
+          onClose={handleToggleTTSBar}
+        />
+      )}
     </div>
   );
 }
