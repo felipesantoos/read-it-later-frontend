@@ -7,6 +7,7 @@ import ReaderHeader from '../components/reader/ReaderHeader';
 import ArticleContent from '../components/reader/ArticleContent';
 import HighlightToolbar from '../components/reader/HighlightToolbar';
 import { useScrollProgress } from '../hooks/useScrollProgress';
+import { useTTS } from '../hooks/useTTS';
 import { validatePageChange } from '../utils/validation';
 import { themeStyles } from '../utils/themeStyles';
 import '../App.css';
@@ -25,13 +26,6 @@ export default function ReaderWidget() {
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
-  useEffect(() => {
-    if (id) {
-      loadArticle();
-      loadHighlights();
-    }
-  }, [id]);
-
   // Função para atualizar estado local sem recarregar o artigo inteiro
   const updateArticleState = (updates: Partial<Article>) => {
     if (!article) return;
@@ -45,6 +39,26 @@ export default function ReaderWidget() {
     onArticleUpdate: updateArticleState,
   });
 
+  // Hook para TTS
+  const tts = useTTS(article, contentRef);
+
+  useEffect(() => {
+    if (id) {
+      loadArticle();
+      loadHighlights();
+    }
+  }, [id]);
+
+  // Stop TTS when navigating away or component unmounts
+  useEffect(() => {
+    return () => {
+      if (tts.state === 'playing' || tts.state === 'paused') {
+        tts.stop();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]); // Only depend on id, not tts object
+
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -54,20 +68,24 @@ export default function ReaderWidget() {
         return;
       }
 
-      // Space to scroll down
-      if (e.key === ' ' && contentRef.current) {
+      // Space to scroll down (only if TTS is not playing)
+      if (e.key === ' ' && contentRef.current && tts.state !== 'playing') {
         e.preventDefault();
         contentRef.current.scrollBy({ top: 300, behavior: 'smooth' });
       }
-      // Escape to go back
+      // Escape to go back or stop TTS
       if (e.key === 'Escape') {
-        navigate('/inbox');
+        if (tts.state === 'playing' || tts.state === 'paused') {
+          tts.stop();
+        } else {
+          navigate('/inbox');
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [navigate]);
+  }, [navigate, tts]);
 
   async function loadArticle() {
     if (!id) return;
@@ -301,6 +319,8 @@ export default function ReaderWidget() {
           highlights={highlights}
           onHighlightsUpdate={handleHighlightsUpdate}
           contentRef={contentRef}
+          onRefresh={handleRefresh}
+          tts={tts}
         />
       </div>
 

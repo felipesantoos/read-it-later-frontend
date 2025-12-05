@@ -8,8 +8,10 @@ import StatusDropdown from './StatusDropdown';
 import TagsManager from '../TagsManager';
 import CollectionsManager from '../CollectionsManager';
 import HighlightsManager from '../HighlightsManager';
+import TTSControls from './TTSControls';
 import type { Highlight } from '../../api/highlights';
 import type { MutableRefObject, RefObject } from 'react';
+import type { UseTTSReturn } from '../../hooks/useTTS';
 
 interface ReaderHeaderProps {
   article: Article;
@@ -33,6 +35,7 @@ interface ReaderHeaderProps {
   onHighlightsUpdate?: () => void;
   contentRef?: MutableRefObject<HTMLDivElement | null>;
   onRefresh?: () => void;
+  tts?: UseTTSReturn;
 }
 
 export default function ReaderHeader({ 
@@ -56,7 +59,8 @@ export default function ReaderHeader({
   highlights,
   onHighlightsUpdate,
   contentRef,
-  onRefresh
+  onRefresh,
+  tts
 }: ReaderHeaderProps) {
   const navigate = useNavigate();
   const currentTheme = themeStyles[theme];
@@ -440,6 +444,31 @@ export default function ReaderHeader({
           compact={true}
           contentRef={contentRef as RefObject<HTMLDivElement> | undefined}
         />
+
+        {/* TTS Controls */}
+        {tts && (
+          <TTSControls
+            tts={tts}
+            theme={theme}
+            compact={true}
+          />
+        )}
+
+        {/* Refresh Button */}
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            title="Atualizar"
+            style={{ padding: '0.25rem', fontSize: '0.75rem', minWidth: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: currentTheme.buttonBg, color: currentTheme.text }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+              <path d="M21 3v5h-5"></path>
+              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+              <path d="M3 21v-5h5"></path>
+            </svg>
+          </button>
+        )}
 
         {/* Theme Button */}
         <button
