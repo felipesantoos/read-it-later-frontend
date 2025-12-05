@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { articlesApi, type Article } from '../api/articles';
 import { statusColors, statusLabels, allStatuses, getStatusTextColor } from '../constants/articleStatus';
 import Button from './Button';
+import ConfirmDialog from './ConfirmDialog';
 import { Heart, Archive, Trash2, Star, BookOpen, Check } from 'lucide-react';
 import '../App.css';
 
@@ -18,6 +19,7 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const statusButtonRef = useRef<HTMLSpanElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; right?: number } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean }>({ isOpen: false });
 
   const handleStatusChange = async (newStatus: Article['status']) => {
     if (isUpdating) return;
@@ -60,18 +62,27 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this article?')) return;
+  const handleDeleteClick = () => {
+    setConfirmDialog({ isOpen: true });
+  };
+
+  const handleDeleteConfirm = async () => {
     if (isUpdating) return;
     setIsUpdating(true);
     try {
       await articlesApi.delete(article.id);
+      setConfirmDialog({ isOpen: false });
       onUpdate?.();
     } catch (error) {
       console.error('Error deleting article:', error);
+      setConfirmDialog({ isOpen: false });
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setConfirmDialog({ isOpen: false });
   };
 
   const formatReadingTime = (seconds: number | null) => {
@@ -356,7 +367,7 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
               icon={<Trash2 size={14} />}
               onClick={(e) => {
                 e.stopPropagation();
-                handleDelete();
+                handleDeleteClick();
               }}
               disabled={isUpdating}
               title="Delete article"
@@ -365,6 +376,14 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        message="Are you sure you want to delete this article?"
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </div>
   );
 }

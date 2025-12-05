@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { collectionsApi, type Collection } from '../api/collections';
 import Toast from './Toast';
+import ConfirmDialog from './ConfirmDialog';
 import type { Theme } from '../utils/themeStyles';
 import { themeStyles } from '../utils/themeStyles';
 import Button from './Button';
@@ -26,6 +27,7 @@ export default function CollectionsManager({ articleId, currentCollections = [],
   const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; collectionId: string | null }>({ isOpen: false, collectionId: null });
 
   useEffect(() => {
     loadCollections();
@@ -168,17 +170,27 @@ export default function CollectionsManager({ articleId, currentCollections = [],
     }
   }
 
-  async function handleDeleteCollection(collectionId: string) {
-    if (!confirm('Are you sure you want to delete this collection?')) return;
+  function handleDeleteCollectionClick(collectionId: string) {
+    setConfirmDialog({ isOpen: true, collectionId });
+  }
+
+  async function handleDeleteCollectionConfirm() {
+    if (!confirmDialog.collectionId) return;
 
     try {
-      await collectionsApi.delete(collectionId);
+      await collectionsApi.delete(confirmDialog.collectionId);
       await loadCollections();
       setMessage({ text: 'Collection deleted', type: 'success' });
+      setConfirmDialog({ isOpen: false, collectionId: null });
     } catch (error) {
       console.error('Error deleting collection:', error);
       setMessage({ text: 'Error deleting collection', type: 'error' });
+      setConfirmDialog({ isOpen: false, collectionId: null });
     }
+  }
+
+  function handleDeleteCollectionCancel() {
+    setConfirmDialog({ isOpen: false, collectionId: null });
   }
 
   const filteredCollections = allCollections.filter(collection => 
@@ -190,6 +202,7 @@ export default function CollectionsManager({ articleId, currentCollections = [],
   // Compact mode: just show button with badge and popover
   if (compact) {
     return (
+      <>
       <div style={{ position: 'relative', display: 'inline-block' }}>
         {message && (
           <Toast
@@ -373,7 +386,7 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                               icon={<X size={14} />}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDeleteCollection(collection.id);
+                                handleDeleteCollectionClick(collection.id);
                               }}
                               title="Delete collection"
                               style={{ color: '#dc3545', padding: '0 0.25rem' }}
@@ -423,11 +436,21 @@ export default function CollectionsManager({ articleId, currentCollections = [],
           )}
         </div>
       </div>
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        message="Are you sure you want to delete this collection?"
+        onConfirm={handleDeleteCollectionConfirm}
+        onCancel={handleDeleteCollectionCancel}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+      </>
     );
   }
 
   // Full mode: original implementation
   return (
+    <>
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
       {message && (
         <Toast
@@ -630,7 +653,7 @@ export default function CollectionsManager({ articleId, currentCollections = [],
                               icon={<X size={14} />}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDeleteCollection(collection.id);
+                                handleDeleteCollectionClick(collection.id);
                               }}
                               title="Delete collection"
                               style={{ color: '#dc3545', padding: '0 0.25rem' }}
@@ -682,6 +705,15 @@ export default function CollectionsManager({ articleId, currentCollections = [],
         </div>
       </div>
     </div>
+    <ConfirmDialog
+      isOpen={confirmDialog.isOpen}
+      message="Are you sure you want to delete this collection?"
+      onConfirm={handleDeleteCollectionConfirm}
+      onCancel={handleDeleteCollectionCancel}
+      confirmText="Delete"
+      cancelText="Cancel"
+    />
+    </>
   );
 }
 

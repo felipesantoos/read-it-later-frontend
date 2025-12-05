@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { tagsApi, type Tag } from '../api/tags';
 import Toast from './Toast';
+import ConfirmDialog from './ConfirmDialog';
 import type { Theme } from '../utils/themeStyles';
 import { themeStyles } from '../utils/themeStyles';
 import Button from './Button';
@@ -26,6 +27,7 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
   const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; tagId: string | null }>({ isOpen: false, tagId: null });
 
   useEffect(() => {
     loadTags();
@@ -164,17 +166,27 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
     }
   }
 
-  async function handleDeleteTag(tagId: string) {
-    if (!confirm('Are you sure you want to delete this tag?')) return;
+  function handleDeleteTagClick(tagId: string) {
+    setConfirmDialog({ isOpen: true, tagId });
+  }
+
+  async function handleDeleteTagConfirm() {
+    if (!confirmDialog.tagId) return;
 
     try {
-      await tagsApi.delete(tagId);
+      await tagsApi.delete(confirmDialog.tagId);
       await loadTags();
       setMessage({ text: 'Tag deleted', type: 'success' });
+      setConfirmDialog({ isOpen: false, tagId: null });
     } catch (error) {
       console.error('Error deleting tag:', error);
       setMessage({ text: 'Error deleting tag', type: 'error' });
+      setConfirmDialog({ isOpen: false, tagId: null });
     }
+  }
+
+  function handleDeleteTagCancel() {
+    setConfirmDialog({ isOpen: false, tagId: null });
   }
 
   const filteredTags = allTags.filter(tag => 
@@ -186,6 +198,7 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
   // Compact mode: just show button with badge and popover
   if (compact) {
     return (
+      <>
       <div style={{ position: 'relative', display: 'inline-block' }}>
         {message && (
           <Toast
@@ -367,7 +380,7 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                               icon={<X size={14} />}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDeleteTag(tag.id);
+                                handleDeleteTagClick(tag.id);
                               }}
                               title="Delete tag"
                               style={{ color: '#dc3545', padding: '0 0.25rem' }}
@@ -417,6 +430,15 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
           )}
         </div>
       </div>
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        message="Are you sure you want to delete this tag?"
+        onConfirm={handleDeleteTagConfirm}
+        onCancel={handleDeleteTagCancel}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+      </>
     );
   }
 
@@ -619,7 +641,7 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
                               icon={<X size={14} />}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDeleteTag(tag.id);
+                                handleDeleteTagClick(tag.id);
                               }}
                               title="Delete tag"
                               style={{ color: '#dc3545', padding: '0 0.25rem' }}
@@ -670,6 +692,14 @@ export default function TagsManager({ articleId, currentTags = [], onUpdate, the
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        message="Are you sure you want to delete this tag?"
+        onConfirm={handleDeleteTagConfirm}
+        onCancel={handleDeleteTagCancel}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { highlightsApi, type Highlight } from '../api/highlights';
 import Toast from './Toast';
+import ConfirmDialog from './ConfirmDialog';
 import type { Theme } from '../utils/themeStyles';
 import { themeStyles } from '../utils/themeStyles';
 import { restoreSelectionFromPosition } from '../utils/highlightUtils';
@@ -35,6 +36,7 @@ export default function HighlightsManager({
   const [highlightForNote, setHighlightForNote] = useState<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; type: 'highlight' | 'note' | null; id: string | null }>({ isOpen: false, type: null, id: null });
 
   useEffect(() => {
     if (currentHighlights.length > 0) {
@@ -104,17 +106,23 @@ export default function HighlightsManager({
     }
   }
 
-  async function handleDeleteHighlight(highlightId: string) {
-    if (!confirm('Are you sure you want to delete this highlight?')) return;
+  function handleDeleteHighlightClick(highlightId: string) {
+    setConfirmDialog({ isOpen: true, type: 'highlight', id: highlightId });
+  }
+
+  async function handleDeleteHighlightConfirm() {
+    if (!confirmDialog.id || confirmDialog.type !== 'highlight') return;
 
     try {
-      await highlightsApi.delete(highlightId);
+      await highlightsApi.delete(confirmDialog.id);
       await loadHighlights();
       onUpdate?.();
       setMessage({ text: 'Highlight deleted', type: 'success' });
+      setConfirmDialog({ isOpen: false, type: null, id: null });
     } catch (error) {
       console.error('Error deleting highlight:', error);
       setMessage({ text: 'Error deleting highlight', type: 'error' });
+      setConfirmDialog({ isOpen: false, type: null, id: null });
     }
   }
 
@@ -183,18 +191,28 @@ export default function HighlightsManager({
     }
   }
 
-  async function handleDeleteNote(noteId: string) {
-    if (!confirm('Are you sure you want to delete this note?')) return;
+  function handleDeleteNoteClick(noteId: string) {
+    setConfirmDialog({ isOpen: true, type: 'note', id: noteId });
+  }
+
+  async function handleDeleteNoteConfirm() {
+    if (!confirmDialog.id || confirmDialog.type !== 'note') return;
 
     try {
-      await highlightsApi.deleteNote(noteId);
+      await highlightsApi.deleteNote(confirmDialog.id);
       await loadHighlights();
       onUpdate?.();
       setMessage({ text: 'Note deleted', type: 'success' });
+      setConfirmDialog({ isOpen: false, type: null, id: null });
     } catch (error) {
       console.error('Error deleting note:', error);
       setMessage({ text: 'Error deleting note', type: 'error' });
+      setConfirmDialog({ isOpen: false, type: null, id: null });
     }
+  }
+
+  function handleDeleteCancel() {
+    setConfirmDialog({ isOpen: false, type: null, id: null });
   }
 
   const currentTheme = themeStyles[theme];
@@ -202,6 +220,7 @@ export default function HighlightsManager({
   // Compact mode: just show button with badge and popover
   if (compact) {
     return (
+      <>
       <div style={{ position: 'relative', display: 'inline-block' }}>
         {message && (
           <Toast
@@ -329,7 +348,7 @@ export default function HighlightsManager({
                               variant="icon"
                               size="sm"
                               icon={<X size={14} />}
-                              onClick={() => handleDeleteHighlight(highlight.id)}
+                              onClick={() => handleDeleteHighlightClick(highlight.id)}
                               title="Delete highlight"
                               style={{ color: '#dc3545', padding: '0 0.25rem', flexShrink: 0 }}
                             />
@@ -406,7 +425,7 @@ export default function HighlightsManager({
                                           variant="icon"
                                           size="sm"
                                           icon={<X size={12} />}
-                                          onClick={() => handleDeleteNote(note.id)}
+                                          onClick={() => handleDeleteNoteClick(note.id)}
                                           title="Delete note"
                                           style={{ color: '#dc3545', padding: '0 0.15rem' }}
                                         />
@@ -497,6 +516,23 @@ export default function HighlightsManager({
           )}
         </div>
       </div>
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen && confirmDialog.type === 'highlight'}
+        message="Are you sure you want to delete this highlight?"
+        onConfirm={handleDeleteHighlightConfirm}
+        onCancel={handleDeleteCancel}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen && confirmDialog.type === 'note'}
+        message="Are you sure you want to delete this note?"
+        onConfirm={handleDeleteNoteConfirm}
+        onCancel={handleDeleteCancel}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+      </>
     );
   }
 
