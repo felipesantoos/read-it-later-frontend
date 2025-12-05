@@ -13,7 +13,7 @@ import type { Highlight } from '../../api/highlights';
 import type { MutableRefObject, RefObject } from 'react';
 import type { UseTTSReturn } from '../../hooks/useTTS';
 import Button from '../Button';
-import { ArrowLeft, Moon, ScrollText, Sun, ExternalLink, Pencil, Plus, RotateCw, X, Check, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Moon, ScrollText, Sun, ExternalLink, Pencil, Plus, RotateCw, X, Check, ChevronLeft, ChevronRight, RefreshCw, Star } from 'lucide-react';
 
 interface ReaderHeaderProps {
   article: Article;
@@ -31,6 +31,7 @@ interface ReaderHeaderProps {
   onPageChange: (newPage: number) => Promise<void>;
   onPagesUpdate: (totalPages: number | null, currentPage: number | null) => Promise<void>;
   onResetProgress: () => Promise<void>;
+  onRatingChange?: (rating: number | null) => Promise<void>;
   onTagsUpdate?: () => void;
   onCollectionsUpdate?: () => void;
   highlights?: Highlight[];
@@ -57,6 +58,7 @@ export default function ReaderHeader({
   onPageChange,
   onPagesUpdate,
   onResetProgress,
+  onRatingChange,
   onTagsUpdate,
   onCollectionsUpdate,
   highlights,
@@ -369,6 +371,36 @@ export default function ReaderHeader({
           isUpdating={isUpdatingStatus}
           theme={theme}
         />
+
+        {/* Rating Stars */}
+        {onRatingChange && (
+          <div style={{ display: 'flex', gap: '0.1rem', alignItems: 'center' }}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <Star
+                key={star}
+                size={14}
+                style={{
+                  color: article.rating !== null && star <= article.rating ? '#ffc107' : currentTheme.secondaryText || '#ccc',
+                  cursor: 'pointer',
+                  fill: article.rating !== null && star <= article.rating ? '#ffc107' : 'none',
+                  transition: 'color 0.2s',
+                }}
+                onClick={() => {
+                  // If clicking the same rating, remove it (set to null)
+                  const newRating = article.rating === star ? null : star;
+                  onRatingChange(newRating);
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as SVGSVGElement).style.color = '#ffc107';
+                }}
+                onMouseLeave={(e) => {
+                  const currentColor = article.rating !== null && star <= article.rating ? '#ffc107' : currentTheme.secondaryText || '#ccc';
+                  (e.currentTarget as SVGSVGElement).style.color = currentColor;
+                }}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Tags Button */}
         <TagsManager

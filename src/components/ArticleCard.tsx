@@ -45,6 +45,21 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
     }
   };
 
+  const handleRatingChange = async (rating: number | null) => {
+    if (isUpdating) return;
+    setIsUpdating(true);
+    try {
+      // If clicking the same rating, remove it (set to null)
+      const newRating = article.rating === rating ? null : rating;
+      await articlesApi.update(article.id, { rating: newRating });
+      onUpdate?.();
+    } catch (error) {
+      console.error('Error updating rating:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete this article?')) return;
     if (isUpdating) return;
@@ -122,8 +137,40 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
             </h3>
             <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', flexShrink: 0 }}>
               {article.isFavorited && (
-                <Star size={14} style={{ color: '#ffc107' }} title="Favorite" />
+                <Star size={14} style={{ color: '#ffc107' }} />
               )}
+              <div 
+                style={{ display: 'flex', gap: '0.1rem', alignItems: 'center' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    size={12}
+                    style={{
+                      color: article.rating !== null && star <= article.rating ? '#ffc107' : '#ccc',
+                      cursor: 'pointer',
+                      fill: article.rating !== null && star <= article.rating ? '#ffc107' : 'none',
+                      transition: 'color 0.2s',
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRatingChange(star);
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isUpdating) {
+                        (e.currentTarget as SVGSVGElement).style.color = '#ffc107';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isUpdating) {
+                        const currentColor = article.rating !== null && star <= article.rating ? '#ffc107' : '#ccc';
+                        (e.currentTarget as SVGSVGElement).style.color = currentColor;
+                      }
+                    }}
+                  />
+                ))}
+              </div>
               <div ref={statusDropdownRef} style={{ position: 'relative' }}>
                 <span
                   ref={statusButtonRef}

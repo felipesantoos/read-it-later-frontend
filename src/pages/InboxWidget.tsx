@@ -9,7 +9,7 @@ import Button from '../components/Button';
 import { Inbox, RefreshCw, Moon, ScrollText, Sun, BookOpen, Star, BarChart, Download } from 'lucide-react';
 import '../App.css';
 
-type SortOption = 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'reading-time' | 'progress';
+type SortOption = 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'reading-time' | 'progress' | 'rating-desc' | 'rating-asc';
 type ContentTypeFilter = 'all' | 'ARTICLE' | 'BLOG' | 'PDF' | 'YOUTUBE' | 'TWITTER' | 'NEWSLETTER' | 'BOOK' | 'EBOOK';
 
 export default function InboxWidget() {
@@ -18,6 +18,7 @@ export default function InboxWidget() {
   const [statusFilter, setStatusFilter] = useState<'UNREAD' | 'READING' | 'PAUSED' | 'FINISHED' | 'all'>('UNREAD');
   const [contentTypeFilter, setContentTypeFilter] = useState<ContentTypeFilter>('all');
   const [sortOption, setSortOption] = useState<SortOption>('date-desc');
+  const [minRatingFilter, setMinRatingFilter] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -46,7 +47,7 @@ export default function InboxWidget() {
     } else {
       loadArticles();
     }
-  }, [searchQuery, statusFilter, contentTypeFilter, sortOption]);
+  }, [searchQuery, statusFilter, contentTypeFilter, sortOption, minRatingFilter]);
 
   async function loadStatusCounts() {
     try {
@@ -83,6 +84,11 @@ export default function InboxWidget() {
         filtered = filtered.filter(a => a.contentType === contentTypeFilter);
       }
       
+      // Filter by minimum rating
+      if (minRatingFilter !== null && minRatingFilter > 0) {
+        filtered = filtered.filter(a => a.rating !== null && a.rating >= minRatingFilter);
+      }
+      
       // Sort
       filtered = sortArticles(filtered, sortOption);
       
@@ -116,6 +122,11 @@ export default function InboxWidget() {
         filtered = filtered.filter(a => a.contentType === contentTypeFilter);
       }
       
+      // Filter by minimum rating
+      if (minRatingFilter !== null && minRatingFilter > 0) {
+        filtered = filtered.filter(a => a.rating !== null && a.rating >= minRatingFilter);
+      }
+      
       // Sort
       filtered = sortArticles(filtered, sortOption);
       
@@ -143,6 +154,18 @@ export default function InboxWidget() {
         return sorted.sort((a, b) => (b.readingTime || 0) - (a.readingTime || 0));
       case 'progress':
         return sorted.sort((a, b) => b.readingProgress - a.readingProgress);
+      case 'rating-desc':
+        return sorted.sort((a, b) => {
+          const aRating = a.rating ?? -1;
+          const bRating = b.rating ?? -1;
+          return bRating - aRating;
+        });
+      case 'rating-asc':
+        return sorted.sort((a, b) => {
+          const aRating = a.rating ?? -1;
+          const bRating = b.rating ?? -1;
+          return aRating - bRating;
+        });
       default:
         return sorted;
     }
@@ -337,6 +360,23 @@ export default function InboxWidget() {
               <option value="title-desc">Title (Z-A)</option>
               <option value="reading-time">Reading time</option>
               <option value="progress">Progress</option>
+              <option value="rating-desc">Rating (highest)</option>
+              <option value="rating-asc">Rating (lowest)</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Min Rating:</label>
+            <select
+              value={minRatingFilter ?? ''}
+              onChange={(e) => setMinRatingFilter(e.target.value ? parseInt(e.target.value) : null)}
+              style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', flex: 1, minWidth: '150px' }}
+            >
+              <option value="">All ratings</option>
+              <option value="1">1+ ⭐</option>
+              <option value="2">2+ ⭐⭐</option>
+              <option value="3">3+ ⭐⭐⭐</option>
+              <option value="4">4+ ⭐⭐⭐⭐</option>
+              <option value="5">5 ⭐⭐⭐⭐⭐</option>
             </select>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>

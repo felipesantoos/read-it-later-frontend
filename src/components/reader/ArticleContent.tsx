@@ -20,6 +20,45 @@ function isHtml(content: string): boolean {
   return /<[a-z][\s\S]*>/i.test(content);
 }
 
+/**
+ * Extract YouTube video ID from various URL formats
+ * Supports:
+ * - youtube.com/watch?v=VIDEO_ID
+ * - youtu.be/VIDEO_ID
+ * - youtube.com/embed/VIDEO_ID
+ * - youtube.com/v/VIDEO_ID
+ * - youtube.com/watch?v=VIDEO_ID&other=params
+ */
+function extractYouTubeVideoId(url: string): string | null {
+  if (!url) return null;
+
+  // Pattern 1: youtube.com/watch?v=VIDEO_ID
+  const watchMatch = url.match(/(?:youtube\.com\/watch\?v=|youtube\.com\/watch\?.*&v=)([^&\s]+)/);
+  if (watchMatch && watchMatch[1]) {
+    return watchMatch[1];
+  }
+
+  // Pattern 2: youtu.be/VIDEO_ID
+  const shortMatch = url.match(/(?:youtu\.be\/)([^?&\s]+)/);
+  if (shortMatch && shortMatch[1]) {
+    return shortMatch[1];
+  }
+
+  // Pattern 3: youtube.com/embed/VIDEO_ID
+  const embedMatch = url.match(/(?:youtube\.com\/embed\/)([^?&\s]+)/);
+  if (embedMatch && embedMatch[1]) {
+    return embedMatch[1];
+  }
+
+  // Pattern 4: youtube.com/v/VIDEO_ID
+  const vMatch = url.match(/(?:youtube\.com\/v\/)([^?&\s]+)/);
+  if (vMatch && vMatch[1]) {
+    return vMatch[1];
+  }
+
+  return null;
+}
+
 export default function ArticleContent({ article, contentRef, theme, fontSize, lineHeight, highlights = [] }: ArticleContentProps) {
   const currentTheme = themeStyles[theme];
 
@@ -372,6 +411,14 @@ export default function ArticleContent({ article, contentRef, theme, fontSize, l
     return result;
   }, [article.content, highlightsKey, theme, isContentHtml, highlights]);
 
+  // Extract YouTube video ID if this is a YouTube article
+  const youtubeVideoId = useMemo(() => {
+    if (article.contentType === 'YOUTUBE') {
+      return extractYouTubeVideoId(article.url);
+    }
+    return null;
+  }, [article.contentType, article.url]);
+
   return (
     <div
       ref={contentRef}
@@ -413,7 +460,43 @@ export default function ArticleContent({ article, contentRef, theme, fontSize, l
         )}
       </div>
 
-      {processedContent ? (
+      {/* YouTube Video Embed */}
+      {article.contentType === 'YOUTUBE' && youtubeVideoId ? (
+        <div style={{
+          marginBottom: '2rem',
+          width: '100%',
+        }}>
+          <div style={{
+            position: 'relative',
+            width: '100%',
+            paddingBottom: '56.25%', // 16:9 aspect ratio
+            height: 0,
+            overflow: 'hidden',
+            borderRadius: '8px',
+            boxShadow: `0 4px 12px ${currentTheme.separator}`,
+          }}>
+            <iframe
+              src={`https://www.youtube.com/embed/${youtubeVideoId}?modestbranding=1&rel=0`}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                border: 'none',
+                borderRadius: '8px',
+              }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              title={article.title || 'YouTube Video'}
+            />
+          </div>
+        </div>
+      ) : article.contentType === 'YOUTUBE' && !youtubeVideoId ? (
+        <div>
+          <p>Não foi possível extrair o ID do vídeo. <a href={article.url} target="_blank" rel="noopener noreferrer">Abrir original</a></p>
+        </div>
+      ) : processedContent ? (
         isContentHtml ? (
           <div
             key={highlightsKey}

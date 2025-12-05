@@ -13,6 +13,7 @@ export interface Article {
   contentType: 'ARTICLE' | 'BLOG' | 'PDF' | 'YOUTUBE' | 'TWITTER' | 'NEWSLETTER' | 'BOOK' | 'EBOOK';
   status: 'UNREAD' | 'READING' | 'PAUSED' | 'FINISHED' | 'ARCHIVED';
   isFavorited: boolean;
+  rating: number | null;
   language: string | null;
   attributes: Record<string, any> | null;
   readingProgress: number;
@@ -55,6 +56,7 @@ export interface CreateArticleData {
 export interface UpdateArticleData {
   status?: Article['status'];
   isFavorited?: boolean;
+  rating?: number | null;
   readingProgress?: number;
   totalPages?: number | null;
   currentPage?: number | null;

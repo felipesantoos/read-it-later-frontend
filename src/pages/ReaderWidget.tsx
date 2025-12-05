@@ -261,6 +261,17 @@ export default function ReaderWidget() {
     }
   }
 
+  async function handleRatingChange(rating: number | null) {
+    if (!article) return;
+    try {
+      const response = await articlesApi.update(article.id, { rating });
+      updateArticleState(response.data);
+    } catch (error) {
+      console.error('Error updating rating:', error);
+      setMessage({ text: 'Error updating rating', type: 'error' });
+    }
+  }
+
   const currentTheme = themeStyles[theme];
 
   const handleToggleTTSBar = () => {
@@ -322,6 +333,7 @@ export default function ReaderWidget() {
           onPageChange={handlePageChange}
           onPagesUpdate={handlePagesUpdate}
           onResetProgress={handleResetProgress}
+          onRatingChange={handleRatingChange}
           onTagsUpdate={updateArticleTagsAndCollections}
           onCollectionsUpdate={updateArticleTagsAndCollections}
           highlights={highlights}
