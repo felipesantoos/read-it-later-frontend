@@ -62,22 +62,37 @@ body.sepia .article-content:not(.highlights-disabled) span[id^="ritl-w-"]:hover,
 }
 
 /* TTS Active Highlight - spans currently being read */
-span[id^="ritl-w-"].tts-active {
-  background-color: rgba(0, 123, 255, 0.25) !important;
+/* High specificity to override highlight styles */
+span[id^="ritl-w-"].tts-active,
+mark span[id^="ritl-w-"].tts-active,
+.article-content span[id^="ritl-w-"].tts-active,
+.article-content mark span[id^="ritl-w-"].tts-active {
+  background-color: rgba(0, 123, 255, 0.35) !important;
   transition: background-color 0.2s ease;
   border-radius: 3px;
   padding: 0 2px;
+  box-shadow: 0 0 0 1px rgba(0, 123, 255, 0.2) !important;
 }
 
 /* Dark theme TTS active highlight */
 [data-theme="dark"] span[id^="ritl-w-"].tts-active,
-.dark span[id^="ritl-w-"].tts-active {
-  background-color: rgba(100, 181, 246, 0.3) !important;
+[data-theme="dark"] mark span[id^="ritl-w-"].tts-active,
+.dark span[id^="ritl-w-"].tts-active,
+.dark mark span[id^="ritl-w-"].tts-active,
+.article-content[data-theme="dark"] span[id^="ritl-w-"].tts-active,
+.article-content[data-theme="dark"] mark span[id^="ritl-w-"].tts-active {
+  background-color: rgba(100, 181, 246, 0.4) !important;
+  box-shadow: 0 0 0 1px rgba(100, 181, 246, 0.3) !important;
 }
 
 /* Sepia theme TTS active highlight */
 [data-theme="sepia"] span[id^="ritl-w-"].tts-active,
-.sepia span[id^="ritl-w-"].tts-active {
-  background-color: rgba(184, 134, 11, 0.25) !important;
+[data-theme="sepia"] mark span[id^="ritl-w-"].tts-active,
+.sepia span[id^="ritl-w-"].tts-active,
+.sepia mark span[id^="ritl-w-"].tts-active,
+.article-content[data-theme="sepia"] span[id^="ritl-w-"].tts-active,
+.article-content[data-theme="sepia"] mark span[id^="ritl-w-"].tts-active {
+  background-color: rgba(184, 134, 11, 0.35) !important;
+  box-shadow: 0 0 0 1px rgba(184, 134, 11, 0.25) !important;
 }
 

@@ -39,9 +39,57 @@ export interface UseTTSReturn {
  */
 interface TTSChunkElement {
   text: string;
-  spans: HTMLElement[]; // Array of spans with IDs (ritl-w-*)
+  spanIds: string[]; // Array of span IDs (ritl-w-*) - stored as IDs to avoid stale DOM references
   chunkIndex: number;
   domElement?: HTMLElement; // Keep for backward compatibility/fallback
+}
+
+/**
+ * Helper function to get span elements by their IDs from the current DOM.
+ * Re-queries the DOM each time to ensure we get valid references even after DOM changes (e.g., highlights).
+ */
+function getSpansByIds(contentRef: MutableRefObject<HTMLDivElement | null>, spanIds: string[]): HTMLElement[] {
+  console.log('[TTS] getSpansByIds called with', spanIds.length, 'spanIds');
+  if (!contentRef.current) {
+    console.warn('[TTS] getSpansByIds: contentRef.current is null');
+    return [];
+  }
+  if (spanIds.length === 0) {
+    console.warn('[TTS] getSpansByIds: spanIds array is empty');
+    return [];
+  }
+  
+  const spans: HTMLElement[] = [];
+  let foundCount = 0;
+  let notFoundIds: string[] = [];
+  
+  for (const spanId of spanIds) {
+    // Try to find span by ID - it might be inside a mark element (highlight) or directly in the DOM
+    // Use document.getElementById as fallback if querySelector doesn't find it in contentRef
+    let span = contentRef.current.querySelector(`#${spanId}`) as HTMLElement;
+    if (!span) {
+      // Fallback: try document.getElementById and check if it's within contentRef
+      const docSpan = document.getElementById(spanId);
+      if (docSpan && contentRef.current.contains(docSpan)) {
+        span = docSpan as HTMLElement;
+        console.log('[TTS] getSpansByIds: Found span', spanId, 'via document.getElementById');
+      } else {
+        console.warn('[TTS] getSpansByIds: Could not find span', spanId);
+        notFoundIds.push(spanId);
+      }
+    } else {
+      foundCount++;
+    }
+    
+    if (span && span.id && span.id.startsWith('ritl-w-')) {
+      spans.push(span);
+    } else if (span) {
+      console.warn('[TTS] getSpansByIds: Found element but ID does not match:', span.id, 'expected:', spanId);
+    }
+  }
+  
+  console.log('[TTS] getSpansByIds: Found', foundCount, 'out of', spanIds.length, 'spans. Not found:', notFoundIds.slice(0, 5), notFoundIds.length > 5 ? '...' : '');
+  return spans;
 }
 
 /**
@@ -53,6 +101,7 @@ function parseContentToElements(contentRef: MutableRefObject<HTMLDivElement | nu
   
   // Try to find spans with IDs first
   const allSpans = Array.from(contentRef.current.querySelectorAll('[id^="ritl-w-"]')) as HTMLElement[];
+  console.log('[TTS] parseContentToElements: Found', allSpans.length, 'spans with ritl-w- IDs');
   
   // If no spans found, fallback to old behavior
   if (allSpans.length === 0) {
@@ -67,8 +116,10 @@ function parseContentToElements(contentRef: MutableRefObject<HTMLDivElement | nu
     return aIndex - bIndex;
   });
   
+  console.log('[TTS] parseContentToElements: First span ID:', allSpans[0]?.id, 'Last span ID:', allSpans[allSpans.length - 1]?.id);
+  
   const chunks: TTSChunkElement[] = [];
-  let currentChunkSpans: HTMLElement[] = [];
+  let currentChunkSpanIds: string[] = [];
   let currentChunkText: string[] = [];
   let globalChunkIndex = 0;
   
@@ -80,8 +131,12 @@ function parseContentToElements(contentRef: MutableRefObject<HTMLDivElement | nu
   for (let i = 0; i < allSpans.length; i++) {
     const span = allSpans[i];
     const spanText = span.textContent || '';
+    const spanId = span.id;
     
-    currentChunkSpans.push(span);
+    // Store the ID instead of the DOM reference
+    if (spanId && spanId.startsWith('ritl-w-')) {
+      currentChunkSpanIds.push(spanId);
+    }
     currentChunkText.push(spanText);
     
     const currentText = currentChunkText.join('');
@@ -95,15 +150,18 @@ function parseContentToElements(contentRef: MutableRefObject<HTMLDivElement | nu
     if (endsWithSentencePunctuation || exceedsMaxLength || i === allSpans.length - 1) {
       const chunkText = currentChunkText.join('').trim();
       
-      if (chunkText.length > 0) {
+      if (chunkText.length > 0 && currentChunkSpanIds.length > 0) {
         chunks.push({
           text: chunkText,
-          spans: [...currentChunkSpans],
+          spanIds: [...currentChunkSpanIds],
           chunkIndex: globalChunkIndex++,
         });
+        if (globalChunkIndex <= 3) {
+          console.log('[TTS] parseContentToElements: Created chunk', globalChunkIndex - 1, 'with', currentChunkSpanIds.length, 'spans. First IDs:', currentChunkSpanIds.slice(0, 3), '...');
+        }
       }
       
-      currentChunkSpans = [];
+      currentChunkSpanIds = [];
       currentChunkText = [];
     }
   }
@@ -158,7 +216,7 @@ function parseContentToElementsFallback(contentRef: MutableRefObject<HTMLDivElem
     
     elements.push({
       text: trimmedText,
-      spans: [], // No spans available in fallback mode
+      spanIds: [], // No spans available in fallback mode
       chunkIndex: globalChunkIndex++,
       domElement: htmlElement, // Keep for fallback
     });
@@ -241,11 +299,78 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
     return () => clearTimeout(timeoutId);
   }, [article, contentRef]);
 
+  // Monitor and reapply styles if they get removed (e.g., by React re-renders)
+  useEffect(() => {
+    if (state !== 'playing') return;
+
+    const checkAndReapplyStyles = () => {
+      if (activeSpansRef.current.length === 0) return;
+
+      activeSpansRef.current.forEach((span, index) => {
+        // Check if the span still exists and has the class
+        if (!span.isConnected) {
+          // Span was removed from DOM, try to find it again by ID
+          const spanId = span.id;
+          if (spanId && contentRef.current) {
+            const foundSpan = contentRef.current.querySelector(`#${spanId}`) as HTMLElement;
+            if (foundSpan) {
+              activeSpansRef.current[index] = foundSpan;
+              span = foundSpan;
+            } else {
+              return; // Span not found, skip
+            }
+          } else {
+            return; // No ID, skip
+          }
+        }
+
+        // Reapply class if missing
+        if (!span.classList.contains('tts-active')) {
+          span.classList.add('tts-active');
+        }
+
+        // Reapply styles if missing or incorrect
+        const computedBg = window.getComputedStyle(span).backgroundColor;
+        
+        // Check if background color is not what we expect (transparent or different)
+        if (computedBg === 'rgba(0, 0, 0, 0)' || computedBg === 'transparent' || 
+            (!computedBg.includes('0, 123, 255') && state === 'playing')) {
+          console.log('[TTS] Reapplying styles to span', span.id, 'computed:', computedBg);
+          span.style.setProperty('background-color', 'rgba(0, 123, 255, 0.35)', 'important');
+          span.style.setProperty('box-shadow', '0 0 0 1px rgba(0, 123, 255, 0.2)', 'important');
+        }
+      });
+    };
+
+    // Check immediately and then periodically
+    checkAndReapplyStyles();
+    const interval = setInterval(checkAndReapplyStyles, 100); // Check every 100ms
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [state, contentRef]);
+
   // Cleanup highlights when state changes to stopped or component unmounts
   useEffect(() => {
     if (state === 'stopped' || state === 'idle') {
       activeSpansRef.current.forEach(span => {
         span.classList.remove('tts-active');
+        // Restore original styles if they were saved
+        const originalStyle = span.getAttribute('data-tts-original-style');
+        if (originalStyle !== null) {
+          if (originalStyle) {
+            span.setAttribute('style', originalStyle);
+          } else {
+            span.removeAttribute('style');
+          }
+          span.removeAttribute('data-tts-original-style');
+          span.removeAttribute('data-tts-original-bg');
+        } else {
+          // Fallback: just remove the properties we added
+          span.style.removeProperty('background-color');
+          span.style.removeProperty('box-shadow');
+        }
       });
       activeSpansRef.current = [];
     }
@@ -254,6 +379,21 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
     return () => {
       activeSpansRef.current.forEach(span => {
         span.classList.remove('tts-active');
+        // Restore original styles if they were saved
+        const originalStyle = span.getAttribute('data-tts-original-style');
+        if (originalStyle !== null) {
+          if (originalStyle) {
+            span.setAttribute('style', originalStyle);
+          } else {
+            span.removeAttribute('style');
+          }
+          span.removeAttribute('data-tts-original-style');
+          span.removeAttribute('data-tts-original-bg');
+        } else {
+          // Fallback: just remove the properties we added
+          span.style.removeProperty('background-color');
+          span.style.removeProperty('box-shadow');
+        }
       });
       activeSpansRef.current = [];
     };
@@ -270,6 +410,21 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
       // Remove highlights when finished
       activeSpansRef.current.forEach(span => {
         span.classList.remove('tts-active');
+        // Restore original styles if they were saved
+        const originalStyle = span.getAttribute('data-tts-original-style');
+        if (originalStyle !== null) {
+          if (originalStyle) {
+            span.setAttribute('style', originalStyle);
+          } else {
+            span.removeAttribute('style');
+          }
+          span.removeAttribute('data-tts-original-style');
+          span.removeAttribute('data-tts-original-bg');
+        } else {
+          // Fallback: just remove the properties we added
+          span.style.removeProperty('background-color');
+          span.style.removeProperty('box-shadow');
+        }
       });
       activeSpansRef.current = [];
       return;
@@ -290,27 +445,88 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
     // Remove highlight from previous spans
     activeSpansRef.current.forEach(span => {
       span.classList.remove('tts-active');
+      // Restore original styles if they were saved
+      const originalStyle = span.getAttribute('data-tts-original-style');
+      if (originalStyle !== null) {
+        if (originalStyle) {
+          span.setAttribute('style', originalStyle);
+        } else {
+          span.removeAttribute('style');
+        }
+        span.removeAttribute('data-tts-original-style');
+        span.removeAttribute('data-tts-original-bg');
+      } else {
+        // Fallback: just remove the properties we added
+        span.style.removeProperty('background-color');
+        span.style.removeProperty('box-shadow');
+      }
     });
     activeSpansRef.current = [];
 
-    // Add highlight to current chunk spans
-    if (chunkElement.spans.length > 0) {
-      chunkElement.spans.forEach(span => {
-        span.classList.add('tts-active');
-        activeSpansRef.current.push(span);
-      });
-
-      // Scroll to first span of current chunk
-      const firstSpan = chunkElement.spans[0];
-      if (firstSpan && contentRef.current) {
-        requestAnimationFrame(() => {
-          firstSpan.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-            inline: 'nearest',
-          });
+    // Get current chunk spans by their IDs (re-query DOM to ensure valid references)
+    console.log('[TTS] speakNextChunk: Chunk', currentChunkIndexRef.current, 'has', chunkElement.spanIds.length, 'spanIds');
+    if (chunkElement.spanIds.length > 0) {
+      console.log('[TTS] speakNextChunk: First 5 spanIds:', chunkElement.spanIds.slice(0, 5));
+      const currentSpans = getSpansByIds(contentRef, chunkElement.spanIds);
+      console.log('[TTS] speakNextChunk: Retrieved', currentSpans.length, 'spans from DOM');
+      
+      if (currentSpans.length > 0) {
+        console.log('[TTS] speakNextChunk: Adding tts-active class to', currentSpans.length, 'spans');
+        // Add highlight to current chunk spans
+        currentSpans.forEach((span, index) => {
+          span.classList.add('tts-active');
+          // Also add inline style to ensure visibility even if CSS is overridden
+          // Save original styles before modifying
+          const originalBgColor = span.style.backgroundColor || '';
+          const originalStyle = span.getAttribute('style') || '';
+          
+          // Set inline style with !important using setProperty
+          span.style.setProperty('background-color', 'rgba(0, 123, 255, 0.35)', 'important');
+          span.style.setProperty('box-shadow', '0 0 0 1px rgba(0, 123, 255, 0.2)', 'important');
+          
+          // Store original values for restoration
+          span.setAttribute('data-tts-original-bg', originalBgColor);
+          span.setAttribute('data-tts-original-style', originalStyle);
+          
+          activeSpansRef.current.push(span);
+          if (index < 3) {
+            const computed = window.getComputedStyle(span);
+            console.log('[TTS] speakNextChunk: Added tts-active to span', span.id, 
+              'classList:', Array.from(span.classList), 
+              'inline style:', span.style.backgroundColor,
+              'computed bg:', computed.backgroundColor,
+              'computed boxShadow:', computed.boxShadow);
+          }
         });
+        console.log('[TTS] speakNextChunk: Total active spans:', activeSpansRef.current.length);
+
+        // Scroll to first span of current chunk
+        const firstSpan = currentSpans[0];
+        if (firstSpan) {
+          console.log('[TTS] speakNextChunk: Scrolling to first span', firstSpan.id);
+          requestAnimationFrame(() => {
+            firstSpan.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center',
+              inline: 'nearest',
+            });
+          });
+        }
+      } else {
+        console.warn('[TTS] speakNextChunk: Could not find ANY spans for chunk', currentChunkIndexRef.current);
+        console.warn('[TTS] speakNextChunk: spanIds were:', chunkElement.spanIds.slice(0, 10));
+        console.warn('[TTS] speakNextChunk: contentRef.current exists?', !!contentRef.current);
+        if (contentRef.current) {
+          const allSpansInContent = contentRef.current.querySelectorAll('[id^="ritl-w-"]');
+          console.warn('[TTS] speakNextChunk: Total spans in contentRef:', allSpansInContent.length);
+          if (allSpansInContent.length > 0) {
+            const firstSpanInContent = allSpansInContent[0] as HTMLElement;
+            console.warn('[TTS] speakNextChunk: First span in contentRef:', firstSpanInContent.id);
+          }
+        }
       }
+    } else {
+      console.warn('[TTS] speakNextChunk: Chunk has no spanIds!');
     }
     
     const utterance = new SpeechSynthesisUtterance(text);
@@ -330,6 +546,21 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
       // Remove highlight from current spans before moving to next
       activeSpansRef.current.forEach(span => {
         span.classList.remove('tts-active');
+        // Restore original styles if they were saved
+        const originalStyle = span.getAttribute('data-tts-original-style');
+        if (originalStyle !== null) {
+          if (originalStyle) {
+            span.setAttribute('style', originalStyle);
+          } else {
+            span.removeAttribute('style');
+          }
+          span.removeAttribute('data-tts-original-style');
+          span.removeAttribute('data-tts-original-bg');
+        } else {
+          // Fallback: just remove the properties we added
+          span.style.removeProperty('background-color');
+          span.style.removeProperty('box-shadow');
+        }
       });
       activeSpansRef.current = [];
       
@@ -346,6 +577,21 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
       // Remove highlights on error
       activeSpansRef.current.forEach(span => {
         span.classList.remove('tts-active');
+        // Restore original styles if they were saved
+        const originalStyle = span.getAttribute('data-tts-original-style');
+        if (originalStyle !== null) {
+          if (originalStyle) {
+            span.setAttribute('style', originalStyle);
+          } else {
+            span.removeAttribute('style');
+          }
+          span.removeAttribute('data-tts-original-style');
+          span.removeAttribute('data-tts-original-bg');
+        } else {
+          // Fallback: just remove the properties we added
+          span.style.removeProperty('background-color');
+          span.style.removeProperty('box-shadow');
+        }
       });
       activeSpansRef.current = [];
     };
@@ -410,6 +656,21 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
     // Remove highlights when stopping
     activeSpansRef.current.forEach(span => {
       span.classList.remove('tts-active');
+      // Restore original styles if they were saved
+      const originalStyle = span.getAttribute('data-tts-original-style');
+      if (originalStyle !== null) {
+        if (originalStyle) {
+          span.setAttribute('style', originalStyle);
+        } else {
+          span.removeAttribute('style');
+        }
+        span.removeAttribute('data-tts-original-style');
+        span.removeAttribute('data-tts-original-bg');
+      } else {
+        // Fallback: just remove the properties we added
+        span.style.removeProperty('background-color');
+        span.style.removeProperty('box-shadow');
+      }
     });
     activeSpansRef.current = [];
   }, [isSupported]);
