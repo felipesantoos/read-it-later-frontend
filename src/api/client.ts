@@ -46,10 +46,14 @@ async function request<T>(
 
   const url = `${API_BASE_URL}${endpoint}`;
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`,
     ...(options.headers as Record<string, string>),
   };
+
+  // Don't set Content-Type for FormData, let browser set it with boundary
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   const response = await fetch(url, {
     ...options,
@@ -103,7 +107,7 @@ export const api = {
   post: <T>(endpoint: string, data?: unknown) =>
     request<T>(endpoint, {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: data instanceof FormData ? data : JSON.stringify(data),
     }),
   patch: <T>(endpoint: string, data?: unknown) =>
     request<T>(endpoint, {

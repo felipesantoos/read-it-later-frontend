@@ -2,8 +2,13 @@ import { api, type ApiResponse, type PaginatedResponse } from './client';
 
 export interface Article {
   id: string;
-  url: string;
-  urlHash: string;
+  url: string | null;
+  urlHash: string | null;
+  fileUrl: string | null;
+  fileName: string | null;
+  fileSize: number | null;
+  fileType: string | null;
+  fileHash: string | null;
   title: string | null;
   description: string | null;
   favicon: string | null;
@@ -41,7 +46,7 @@ export interface Article {
 }
 
 export interface CreateArticleData {
-  url: string;
+  url?: string;
   contentType?: Article['contentType'];
   title?: string;
   description?: string;
@@ -96,6 +101,14 @@ export const articlesApi = {
     api.get<ApiResponse<Article>>(`/articles/${id}`),
   create: (data: CreateArticleData) =>
     api.post<ApiResponse<Article>>('/articles', data),
+  createFromFile: (file: File, token?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (token) {
+      formData.append('token', token);
+    }
+    return api.post<ApiResponse<Article>>('/articles', formData);
+  },
   update: (id: string, data: UpdateArticleData) =>
     api.patch<ApiResponse<Article>>(`/articles/${id}`, data),
   delete: (id: string) => api.delete(`/articles/${id}`),

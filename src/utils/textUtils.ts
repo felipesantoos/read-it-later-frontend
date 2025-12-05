@@ -11,3 +11,4 @@ export function extractTextFromHtml(html: string | null | undefined): string {
   return tempDiv.textContent || tempDiv.innerText || '';
 }
 
+

@@ -135,7 +135,7 @@ export default function HighlightsWidget() {
             >
               <div style={{ marginBottom: '0.5rem' }}>
                 <p style={{ fontSize: '0.8rem', color: currentTheme.secondaryText, margin: 0 }}>
-                  {extractTextFromHtml(highlight.article.title) || highlight.article.url}
+                  {extractTextFromHtml(highlight.article.title) || highlight.article.url || highlight.article.fileName || 'Untitled'}
                 </p>
               </div>
               <p style={{ fontSize: '0.9rem', margin: '0.5rem 0', fontStyle: 'italic', color: currentTheme.text }}>

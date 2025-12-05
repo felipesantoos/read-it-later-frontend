@@ -12,6 +12,8 @@ interface ArticleContentProps {
   lineHeight: number;
   highlights?: Highlight[];
   isHighlightingEnabled?: boolean;
+  viewMode?: 'text' | 'pdf';
+  showTitle?: boolean;
 }
 
 /**
@@ -60,8 +62,66 @@ function extractYouTubeVideoId(url: string): string | null {
   return null;
 }
 
-export default function ArticleContent({ article, contentRef, theme, fontSize, lineHeight, highlights = [], isHighlightingEnabled = true }: ArticleContentProps) {
+export default function ArticleContent({ article, contentRef, theme, fontSize, lineHeight, highlights = [], isHighlightingEnabled = true, viewMode = 'text', showTitle = true }: ArticleContentProps) {
   const currentTheme = themeStyles[theme];
+
+  // If PDF view mode and fileUrl exists, show PDF viewer
+  if (viewMode === 'pdf' && article.contentType === 'PDF' && article.fileUrl) {
+    return (
+      <div
+        ref={contentRef}
+        style={{
+          backgroundColor: currentTheme.bg,
+          color: currentTheme.text,
+          height: '100%',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {/* Article Title */}
+        {showTitle && (
+          <div style={{ 
+            padding: '1.5rem',
+            borderBottom: `1px solid ${currentTheme.cardBorder || '#e0e0e0'}`,
+          }}>
+            <h1 
+              style={{ 
+                fontSize: `${fontSize * 1.5}px`, 
+                fontWeight: 600, 
+                marginBottom: '0.75rem', 
+                lineHeight: 1.3, 
+                color: currentTheme.text 
+              }}
+            >
+              {article.title || article.fileName || 'Untitled'}
+            </h1>
+            {article.description && (
+              <p style={{ 
+                fontSize: `${fontSize * 0.9}px`, 
+                color: currentTheme.secondaryText, 
+                marginBottom: 0,
+              }}>
+                {article.description}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* PDF Viewer */}
+        <iframe
+          src={article.fileUrl || ''}
+          style={{
+            flex: 1,
+            width: '100%',
+            border: 'none',
+            backgroundColor: '#525252', // Dark background for PDF viewer
+          }}
+          title="PDF Viewer"
+        />
+      </div>
+    );
+  }
 
   // Handle image errors after HTML is rendered
   useEffect(() => {
@@ -244,7 +304,7 @@ export default function ArticleContent({ article, contentRef, theme, fontSize, l
 
   // Extract YouTube video ID if this is a YouTube article
   const youtubeVideoId = useMemo(() => {
-    if (article.contentType === 'YOUTUBE') {
+    if (article.contentType === 'YOUTUBE' && article.url) {
       return extractYouTubeVideoId(article.url);
     }
     return null;
@@ -267,32 +327,34 @@ export default function ArticleContent({ article, contentRef, theme, fontSize, l
       className={`article-content ${!isHighlightingEnabled ? 'highlights-disabled' : ''}`}
     >
       {/* Article Title and Description */}
-      <div style={{ 
-        marginBottom: '2rem'
-      }}>
-        <h1 
-          style={{ 
-            fontSize: `${fontSize * 1.5}px`, 
-            fontWeight: 600, 
-            marginBottom: '0.75rem', 
-            lineHeight: 1.3, 
-            color: currentTheme.text 
-          }}
-          dangerouslySetInnerHTML={{ 
-            __html: article.title || article.url 
-          }}
-        />
-        {article.description && (
-          <p style={{ 
-            fontSize: `${fontSize * 0.9}px`, 
-            color: currentTheme.secondaryText, 
-            marginBottom: 0,
-            lineHeight: lineHeight
-          }}>
-            {article.description}
-          </p>
-        )}
-      </div>
+      {showTitle && (
+        <div style={{ 
+          marginBottom: '2rem'
+        }}>
+          <h1 
+            style={{ 
+              fontSize: `${fontSize * 1.5}px`, 
+              fontWeight: 600, 
+              marginBottom: '0.75rem', 
+              lineHeight: 1.3, 
+              color: currentTheme.text 
+            }}
+            dangerouslySetInnerHTML={{ 
+              __html: article.title || article.url || article.fileName || 'Untitled'
+            }}
+          />
+          {article.description && (
+            <p style={{ 
+              fontSize: `${fontSize * 0.9}px`, 
+              color: currentTheme.secondaryText, 
+              marginBottom: 0,
+              lineHeight: lineHeight
+            }}>
+              {article.description}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* YouTube Video Embed */}
       {article.contentType === 'YOUTUBE' && youtubeVideoId ? (
@@ -328,7 +390,7 @@ export default function ArticleContent({ article, contentRef, theme, fontSize, l
         </div>
       ) : article.contentType === 'YOUTUBE' && !youtubeVideoId ? (
         <div>
-          <p>Não foi possível extrair o ID do vídeo. <a href={article.url} target="_blank" rel="noopener noreferrer">Abrir original</a></p>
+          <p>Não foi possível extrair o ID do vídeo. {article.url && <a href={article.url} target="_blank" rel="noopener noreferrer">Abrir original</a>}</p>
         </div>
       ) : processedContent ? (
         isContentHtml ? (
@@ -352,7 +414,7 @@ export default function ArticleContent({ article, contentRef, theme, fontSize, l
         )
       ) : (
         <div>
-          <p>Conteúdo não disponível. <a href={article.url} target="_blank" rel="noopener noreferrer">Abrir original</a></p>
+          <p>Conteúdo não disponível. {article.url && <a href={article.url} target="_blank" rel="noopener noreferrer">Abrir original</a>}</p>
         </div>
       )}
 

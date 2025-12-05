@@ -23,6 +23,7 @@ export default function InboxWidget() {
   const [isSearching, setIsSearching] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [urlInput, setUrlInput] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const { theme, cycleTheme } = useTheme();
   const [statusCounts, setStatusCounts] = useState<ArticleCounts>({
@@ -172,16 +173,24 @@ export default function InboxWidget() {
   }
 
   async function handleSaveUrl() {
-    if (!urlInput.trim()) {
-      setMessage({ text: 'Please enter a URL', type: 'error' });
+    if (!urlInput.trim() && !selectedFile) {
+      setMessage({ text: 'Please enter a URL or select a file', type: 'error' });
       return;
     }
 
     setIsSaving(true);
     try {
-      await articlesApi.create({ url: urlInput.trim() });
-      setMessage({ text: 'Article saved successfully!', type: 'success' });
-      setUrlInput('');
+      if (selectedFile) {
+        // Upload file
+        await articlesApi.createFromFile(selectedFile);
+        setMessage({ text: 'File uploaded successfully!', type: 'success' });
+        setSelectedFile(null);
+      } else {
+        // Save URL
+        await articlesApi.create({ url: urlInput.trim() });
+        setMessage({ text: 'Article saved successfully!', type: 'success' });
+        setUrlInput('');
+      }
       await handleArticleUpdate();
     } catch (error) {
       console.error('Error saving article:', error);
@@ -189,6 +198,18 @@ export default function InboxWidget() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setUrlInput(''); // Clear URL input when file is selected
+    }
+  }
+
+  function handleRemoveFile() {
+    setSelectedFile(null);
   }
 
   // Keyboard shortcuts
@@ -306,30 +327,86 @@ export default function InboxWidget() {
         </Button>
       </div>
 
-      {/* Save URL input */}
+      {/* Save URL or File input */}
       <div className="card mb-1" style={{ padding: '0.5rem', backgroundColor: currentTheme.cardBg, border: `1px solid ${currentTheme.cardBorder}` }}>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <input
-            type="text"
-            placeholder="Paste URL here..."
-            value={urlInput}
-            onChange={(e) => setUrlInput(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                handleSaveUrl();
-              }
-            }}
-            style={{ flex: 1, padding: '0.5rem', fontSize: '0.875rem' }}
-            disabled={isSaving}
-          />
-          <button
-            className="primary"
-            onClick={handleSaveUrl}
-            disabled={isSaving || !urlInput.trim()}
-            style={{ padding: '0.5rem 1rem' }}
-          >
-            {isSaving ? 'Saving...' : 'Save'}
-          </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <input
+              type="text"
+              placeholder="Paste URL here..."
+              value={urlInput}
+              onChange={(e) => {
+                setUrlInput(e.target.value);
+                if (e.target.value.trim()) {
+                  setSelectedFile(null); // Clear file when URL is entered
+                }
+              }}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleSaveUrl();
+                }
+              }}
+              style={{ flex: 1, padding: '0.5rem', fontSize: '0.875rem' }}
+              disabled={isSaving || !!selectedFile}
+            />
+            <label
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: currentTheme.buttonBg || '#007bff',
+                color: 'white',
+                borderRadius: '4px',
+                cursor: isSaving ? 'not-allowed' : 'pointer',
+                fontSize: '0.875rem',
+                display: 'flex',
+                alignItems: 'center',
+                opacity: isSaving ? 0.6 : 1,
+              }}
+            >
+              <input
+                type="file"
+                accept=".pdf,.html,.htm,.txt,.md,.markdown,.epub,.docx,.doc"
+                onChange={handleFileSelect}
+                disabled={isSaving || !!urlInput.trim()}
+                style={{ display: 'none' }}
+              />
+              📎 Upload
+            </label>
+            <button
+              className="primary"
+              onClick={handleSaveUrl}
+              disabled={isSaving || (!urlInput.trim() && !selectedFile)}
+              style={{ padding: '0.5rem 1rem' }}
+            >
+              {isSaving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+          {selectedFile && (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem',
+              padding: '0.25rem 0.5rem',
+              backgroundColor: currentTheme.inputBg || '#f8f9fa',
+              borderRadius: '4px',
+              fontSize: '0.75rem'
+            }}>
+              <span>📄 {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)</span>
+              <button
+                onClick={handleRemoveFile}
+                style={{
+                  marginLeft: 'auto',
+                  padding: '0.125rem 0.5rem',
+                  fontSize: '0.75rem',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: currentTheme.text,
+                  cursor: 'pointer',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

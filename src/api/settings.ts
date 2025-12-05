@@ -12,3 +12,4 @@ export const settingsApi = {
     api.put<ApiResponse<ThemeSettings>>('/settings/theme', { theme }),
 };
 
+

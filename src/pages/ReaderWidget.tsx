@@ -30,6 +30,8 @@ export default function ReaderWidget() {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [showTTSBar, setShowTTSBar] = useState(false);
   const [isHighlightingEnabled, setIsHighlightingEnabled] = useState(true);
+  const [viewMode, setViewMode] = useState<'text' | 'pdf'>('text'); // 'text' or 'pdf'
+  const [showTitle, setShowTitle] = useState(true);
 
   // Função para atualizar estado local sem recarregar o artigo inteiro
   const updateArticleState = (updates: Partial<Article>) => {
@@ -51,6 +53,7 @@ export default function ReaderWidget() {
     if (id) {
       loadArticle();
       loadHighlights();
+      setViewMode('text'); // Reset to text view when changing articles
     }
   }, [id]);
 
@@ -345,6 +348,10 @@ export default function ReaderWidget() {
           onToggleTTSBar={handleToggleTTSBar}
           isHighlightingEnabled={isHighlightingEnabled}
           onHighlightingToggle={() => setIsHighlightingEnabled(prev => !prev)}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          showTitle={showTitle}
+          onShowTitleToggle={() => setShowTitle(prev => !prev)}
         />
       </div>
 
@@ -366,6 +373,8 @@ export default function ReaderWidget() {
           lineHeight={lineHeight}
           highlights={highlights}
           isHighlightingEnabled={isHighlightingEnabled}
+          viewMode={viewMode}
+          showTitle={showTitle}
         />
         
         {/* Highlight Toolbar - appears near selected text */}

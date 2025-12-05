@@ -145,7 +145,7 @@ export default function ArticleCard({ article, onUpdate }: ArticleCardProps) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.25rem' }}>
             <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-              {extractTextFromHtml(article.title) || article.url}
+              {extractTextFromHtml(article.title) || article.url || article.fileName || 'Untitled'}
             </h3>
             <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', flexShrink: 0 }}>
               {article.isFavorited && (

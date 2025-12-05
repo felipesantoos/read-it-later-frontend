@@ -13,7 +13,7 @@ import type { Highlight } from '../../api/highlights';
 import type { MutableRefObject, RefObject } from 'react';
 import type { UseTTSReturn } from '../../hooks/useTTS';
 import Button from '../Button';
-import { ArrowLeft, Moon, ScrollText, Sun, ExternalLink, Pencil, Plus, RotateCw, X, Check, ChevronLeft, ChevronRight, RefreshCw, Star, Highlighter } from 'lucide-react';
+import { ArrowLeft, Moon, ScrollText, Sun, ExternalLink, Pencil, Plus, RotateCw, X, Check, ChevronLeft, ChevronRight, RefreshCw, Star, Highlighter, FileText, File, Eye, EyeOff } from 'lucide-react';
 
 interface ReaderHeaderProps {
   article: Article;
@@ -42,6 +42,10 @@ interface ReaderHeaderProps {
   onToggleTTSBar?: () => void;
   isHighlightingEnabled?: boolean;
   onHighlightingToggle?: () => void;
+  viewMode?: 'text' | 'pdf';
+  onViewModeChange?: (mode: 'text' | 'pdf') => void;
+  showTitle?: boolean;
+  onShowTitleToggle?: () => void;
 }
 
 export default function ReaderHeader({ 
@@ -70,7 +74,11 @@ export default function ReaderHeader({
   tts,
   onToggleTTSBar,
   isHighlightingEnabled = true,
-  onHighlightingToggle
+  onHighlightingToggle,
+  viewMode = 'text',
+  onViewModeChange,
+  showTitle = true,
+  onShowTitleToggle
 }: ReaderHeaderProps) {
   const navigate = useNavigate();
   const currentTheme = themeStyles[theme];
@@ -434,6 +442,36 @@ export default function ReaderHeader({
           contentRef={contentRef as RefObject<HTMLDivElement> | undefined}
         />
 
+        {/* View Mode Toggle (for PDFs) */}
+        {article.contentType === 'PDF' && article.fileUrl && onViewModeChange && (
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={viewMode === 'text' ? <File size={14} /> : <FileText size={14} />}
+            onClick={() => onViewModeChange(viewMode === 'text' ? 'pdf' : 'text')}
+            title={viewMode === 'text' ? "View PDF" : "View extracted text"}
+            style={{ 
+              color: currentTheme.text,
+            }}
+          >
+            {viewMode === 'text' ? 'PDF' : 'Text'}
+          </Button>
+        )}
+
+        {/* Show/Hide Title Toggle */}
+        {onShowTitleToggle && (
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={showTitle ? <EyeOff size={14} /> : <Eye size={14} />}
+            onClick={onShowTitleToggle}
+            title={showTitle ? "Hide title" : "Show title"}
+            style={{ 
+              color: currentTheme.text,
+            }}
+          />
+        )}
+
         {/* Highlight Toggle Button */}
         {onHighlightingToggle && (
           <Button
@@ -482,16 +520,18 @@ export default function ReaderHeader({
         />
         
         {/* Original Link */}
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={<ExternalLink size={14} />}
-          onClick={() => window.open(article.url, '_blank', 'noopener,noreferrer')}
-          title="Open original article"
-          style={{ color: currentTheme.text, textDecoration: 'none' }}
-        >
-          Original
-        </Button>
+        {(article.url || article.fileUrl) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<ExternalLink size={14} />}
+            onClick={() => window.open(article.url || article.fileUrl || '', '_blank', 'noopener,noreferrer')}
+            title="Open original article"
+            style={{ color: currentTheme.text, textDecoration: 'none' }}
+          >
+            Original
+          </Button>
+        )}
       </div>
     </div>
   );

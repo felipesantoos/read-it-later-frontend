@@ -50,7 +50,7 @@ export default function HomePage() {
         
         setCurrentReading(
           sortedArticles.map(article => ({
-            title: extractTextFromHtml(article.title) || article.url,
+            title: extractTextFromHtml(article.title) || article.url || article.fileName || 'Untitled',
             id: article.id,
           }))
         );
