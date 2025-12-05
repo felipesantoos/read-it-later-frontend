@@ -383,11 +383,10 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
     
     // Event handlers
     utterance.onend = () => {
-      currentChunkIndexRef.current++;
+      // Only process if not paused (paused utterances should not increment index)
       if (!isPausedRef.current) {
+        currentChunkIndexRef.current++;
         speakNextChunk();
-      } else {
-        setState('paused');
       }
     };
     
@@ -405,25 +404,43 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
   const play = useCallback(() => {
     if (!isSupported || !article) return;
     
-    if (state === 'paused') {
-      // Resume from where we paused
-      isPausedRef.current = false;
+    // Clear the onend handler before canceling to prevent index increment
+    if (utteranceRef.current) {
+      utteranceRef.current.onend = null;
+    }
+    
+    // Always cancel any existing utterance before starting/resuming
+    window.speechSynthesis.cancel();
+    
+    // Check if we're resuming from pause using the ref (more reliable than state)
+    const wasPaused = isPausedRef.current;
+    isPausedRef.current = false;
+    
+    if (wasPaused) {
+      // Resume from where we paused (currentChunkIndexRef already has the right position)
       setState('playing');
       speakNextChunk();
     } else {
-      // Start from beginning or current position
-      window.speechSynthesis.cancel();
-      isPausedRef.current = false;
+      // Start from beginning
       currentChunkIndexRef.current = 0;
       speakNextChunk();
     }
-  }, [state, isSupported, article, speakNextChunk]);
+  }, [isSupported, article, speakNextChunk]);
 
   const pause = useCallback(() => {
     if (!isSupported) return;
     
-    window.speechSynthesis.pause();
+    // Set paused flag FIRST to prevent onend from incrementing index
     isPausedRef.current = true;
+    
+    // Clear the onend handler before canceling to prevent index increment
+    if (utteranceRef.current) {
+      utteranceRef.current.onend = null;
+    }
+    
+    // Cancel current utterance instead of pausing
+    // speechSynthesis.pause() is unreliable across browsers
+    window.speechSynthesis.cancel();
     setState('paused');
   }, [isSupported]);
 
