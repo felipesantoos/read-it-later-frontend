@@ -304,7 +304,23 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
     if (state !== 'playing') return;
 
     const checkAndReapplyStyles = () => {
-      if (activeSpansRef.current.length === 0) return;
+      if (activeSpansRef.current.length === 0) {
+        // If no active spans but we're playing, try to get current chunk spans
+        const currentChunk = chunksRef.current[currentChunkIndexRef.current];
+        if (currentChunk && currentChunk.spanIds.length > 0) {
+          const currentSpans = getSpansByIds(contentRef, currentChunk.spanIds);
+          if (currentSpans.length > 0) {
+            console.log('[TTS] useEffect: Found', currentSpans.length, 'spans for current chunk, applying styles');
+            currentSpans.forEach((span) => {
+              span.classList.add('tts-active');
+              span.style.setProperty('background-color', 'rgba(0, 123, 255, 0.35)', 'important');
+              span.style.setProperty('box-shadow', '0 0 0 1px rgba(0, 123, 255, 0.2)', 'important');
+              activeSpansRef.current.push(span);
+            });
+          }
+        }
+        return;
+      }
 
       activeSpansRef.current.forEach((span, index) => {
         // Check if the span still exists and has the class
@@ -342,14 +358,16 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
       });
     };
 
-    // Check immediately and then periodically
-    checkAndReapplyStyles();
+    // Check immediately (important for first chunk) and then periodically
+    requestAnimationFrame(() => {
+      checkAndReapplyStyles();
+    });
     const interval = setInterval(checkAndReapplyStyles, 100); // Check every 100ms
 
     return () => {
       clearInterval(interval);
     };
-  }, [state, contentRef]);
+  }, [state, contentRef, progress?.currentIndex]);
 
   // Cleanup highlights when state changes to stopped or component unmounts
   useEffect(() => {
@@ -472,33 +490,53 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
       
       if (currentSpans.length > 0) {
         console.log('[TTS] speakNextChunk: Adding tts-active class to', currentSpans.length, 'spans');
-        // Add highlight to current chunk spans
-        currentSpans.forEach((span, index) => {
-          span.classList.add('tts-active');
-          // Also add inline style to ensure visibility even if CSS is overridden
-          // Save original styles before modifying
-          const originalBgColor = span.style.backgroundColor || '';
-          const originalStyle = span.getAttribute('style') || '';
-          
-          // Set inline style with !important using setProperty
-          span.style.setProperty('background-color', 'rgba(0, 123, 255, 0.35)', 'important');
-          span.style.setProperty('box-shadow', '0 0 0 1px rgba(0, 123, 255, 0.2)', 'important');
-          
-          // Store original values for restoration
-          span.setAttribute('data-tts-original-bg', originalBgColor);
-          span.setAttribute('data-tts-original-style', originalStyle);
-          
-          activeSpansRef.current.push(span);
-          if (index < 3) {
-            const computed = window.getComputedStyle(span);
-            console.log('[TTS] speakNextChunk: Added tts-active to span', span.id, 
-              'classList:', Array.from(span.classList), 
-              'inline style:', span.style.backgroundColor,
-              'computed bg:', computed.backgroundColor,
-              'computed boxShadow:', computed.boxShadow);
-          }
-        });
-        console.log('[TTS] speakNextChunk: Total active spans:', activeSpansRef.current.length);
+        
+        // Apply styles using requestAnimationFrame to ensure DOM is ready
+        const applyStyles = () => {
+          // Add highlight to current chunk spans
+          currentSpans.forEach((span, index) => {
+            span.classList.add('tts-active');
+            // Also add inline style to ensure visibility even if CSS is overridden
+            // Save original styles before modifying
+            const originalBgColor = span.style.backgroundColor || '';
+            const originalStyle = span.getAttribute('style') || '';
+            
+            // Set inline style with !important using setProperty
+            span.style.setProperty('background-color', 'rgba(0, 123, 255, 0.35)', 'important');
+            span.style.setProperty('box-shadow', '0 0 0 1px rgba(0, 123, 255, 0.2)', 'important');
+            
+            // Store original values for restoration
+            span.setAttribute('data-tts-original-bg', originalBgColor);
+            span.setAttribute('data-tts-original-style', originalStyle);
+            
+            activeSpansRef.current.push(span);
+            if (index < 3) {
+              const computed = window.getComputedStyle(span);
+              console.log('[TTS] speakNextChunk: Added tts-active to span', span.id, 
+                'classList:', Array.from(span.classList), 
+                'inline style:', span.style.backgroundColor,
+                'computed bg:', computed.backgroundColor,
+                'computed boxShadow:', computed.boxShadow);
+            }
+          });
+          console.log('[TTS] speakNextChunk: Total active spans:', activeSpansRef.current.length);
+
+          // Verify styles were applied (especially important for first chunk)
+          requestAnimationFrame(() => {
+            currentSpans.forEach((span) => {
+              const computed = window.getComputedStyle(span);
+              if (computed.backgroundColor === 'rgba(0, 0, 0, 0)' || computed.backgroundColor === 'transparent') {
+                console.log('[TTS] speakNextChunk: Reapplying styles to span', span.id, 'computed:', computed.backgroundColor);
+                span.style.setProperty('background-color', 'rgba(0, 123, 255, 0.35)', 'important');
+                span.style.setProperty('box-shadow', '0 0 0 1px rgba(0, 123, 255, 0.2)', 'important');
+              }
+            });
+          });
+        };
+
+        // Apply styles immediately and also in next frame to ensure they stick
+        applyStyles();
+        requestAnimationFrame(applyStyles);
 
         // Scroll to first span of current chunk
         const firstSpan = currentSpans[0];
@@ -605,9 +643,15 @@ export function useTTS(article: Article | null, contentRef: MutableRefObject<HTM
     });
     
     utteranceRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
+    
+    // Set state to 'playing' BEFORE starting speech to ensure useEffect triggers
     setState('playing');
-    console.log('[TTS] Started speaking chunk', currentChunkIndexRef.current + 1);
+    
+    // Use requestAnimationFrame to ensure DOM updates are complete before starting speech
+    requestAnimationFrame(() => {
+      window.speechSynthesis.speak(utterance);
+      console.log('[TTS] Started speaking chunk', currentChunkIndexRef.current + 1);
+    });
   }, [options, currentVoice, contentRef]);
 
   const play = useCallback(() => {
